@@ -1,0 +1,28 @@
+{
+  "name": "savehydroo",
+  "version": "1.0.0",
+  "description": "Smart Water Blending and Monitoring System with Wokwi Simulation",
+  "main": "index.js",
+  "scripts": {
+    "dev": "http-server frontend -p 3000 -c-1",
+    "build": "node scripts/train-model.js",
+    "simulate": "node simulation/sensors.js",
+    "simulate:test": "node simulation/sensors.js --test",
+    "test:api": "node test/api-tests.js"
+  },
+  "keywords": [
+    "water-management",
+    "iot-simulation",
+    "wokwi",
+    "smart-water",
+    "supabase"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}

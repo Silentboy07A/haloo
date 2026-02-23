@@ -1,0 +1,560 @@
+{
+  "version": "1.0.0",
+  "trainedAt": "2026-02-23T14:27:14.092Z",
+  "metrics": {
+    "rmse": 23.63,
+    "samples": 216
+  },
+  "forest": {
+    "numTrees": 12,
+    "forest": [
+      {
+        "maxDepth": 3,
+        "tree": {
+          "threshold": 214,
+          "left": {
+            "threshold": 106,
+            "left": {
+              "threshold": 180,
+              "left": {
+                "value": 222.54749457355587
+              },
+              "right": {
+                "value": 232.3807004914524
+              }
+            },
+            "right": {
+              "threshold": 63,
+              "left": {
+                "value": 216.21616393524522
+              },
+              "right": {
+                "value": 200.0047281703816
+              }
+            }
+          },
+          "right": {
+            "threshold": 0,
+            "left": {
+              "threshold": 181,
+              "left": {
+                "value": 225.18580609257836
+              },
+              "right": {
+                "value": 242.64312729394976
+              }
+            },
+            "right": {
+              "threshold": 206,
+              "left": {
+                "value": 206.43036651079086
+              },
+              "right": {
+                "value": 223.9194708124802
+              }
+            }
+          }
+        }
+      },
+      {
+        "maxDepth": 3,
+        "tree": {
+          "threshold": 183,
+          "left": {
+            "threshold": 97,
+            "left": {
+              "threshold": 172,
+              "left": {
+                "value": 221.97271458223972
+              },
+              "right": {
+                "value": 250.22594221136083
+              }
+            },
+            "right": {
+              "threshold": 208,
+              "left": {
+                "value": 208.34677406011855
+              },
+              "right": {
+                "value": 217.64702040858904
+              }
+            }
+          },
+          "right": {
+            "threshold": 73,
+            "left": {
+              "threshold": 216,
+              "left": {
+                "value": 250.91308521699358
+              },
+              "right": {
+                "value": 251.66621154100804
+              }
+            },
+            "right": {
+              "threshold": 229,
+              "left": {
+                "value": 224.00888593342825
+              },
+              "right": {
+                "value": 240.73405737771765
+              }
+            }
+          }
+        }
+      },
+      {
+        "maxDepth": 3,
+        "tree": {
+          "threshold": 157,
+          "left": {
+            "threshold": 72,
+            "left": {
+              "threshold": 208,
+              "left": {
+                "value": 209.78234917204063
+              },
+              "right": {
+                "value": 222.00671443558358
+              }
+            },
+            "right": {
+              "threshold": 105,
+              "left": {
+                "value": 201.8732702626629
+              },
+              "right": {
+                "value": 205.63290117664394
+              }
+            }
+          },
+          "right": {
+            "threshold": 19,
+            "left": {
+              "threshold": 73,
+              "left": {
+                "value": 244.12460720407373
+              },
+              "right": {
+                "value": 229.35595379427724
+              }
+            },
+            "right": {
+              "threshold": 143,
+              "left": {
+                "value": 206.19832014092393
+              },
+              "right": {
+                "value": 217.57873109437142
+              }
+            }
+          }
+        }
+      },
+      {
+        "maxDepth": 3,
+        "tree": {
+          "threshold": 211,
+          "left": {
+            "threshold": 24,
+            "left": {
+              "threshold": 129,
+              "left": {
+                "value": 253.5624090643605
+              },
+              "right": {
+                "value": 232.32577230839266
+              }
+            },
+            "right": {
+              "threshold": 196,
+              "left": {
+                "value": 211.89364333798665
+              },
+              "right": {
+                "value": 223.91285732824778
+              }
+            }
+          },
+          "right": {
+            "threshold": 89,
+            "left": {
+              "threshold": 211,
+              "left": {
+                "value": 242.2332669127775
+              },
+              "right": {
+                "value": 248.22620211372214
+              }
+            },
+            "right": {
+              "threshold": 160,
+              "left": {
+                "value": 212.6843809510291
+              },
+              "right": {
+                "value": 234.94402215683112
+              }
+            }
+          }
+        }
+      },
+      {
+        "maxDepth": 3,
+        "tree": {
+          "threshold": 201,
+          "left": {
+            "threshold": 98,
+            "left": {
+              "threshold": 35,
+              "left": {
+                "value": 223.98046713345894
+              },
+              "right": {
+                "value": 217.60225824442395
+              }
+            },
+            "right": {
+              "threshold": 59,
+              "left": {
+                "value": 210.62270709404095
+              },
+              "right": {
+                "value": 203.02220843069145
+              }
+            }
+          },
+          "right": {
+            "threshold": 147,
+            "left": {
+              "threshold": 154,
+              "left": {
+                "value": 252.43020753024655
+              },
+              "right": {
+                "value": 241.8911155721638
+              }
+            },
+            "right": {
+              "threshold": 190,
+              "left": {
+                "value": 221.58204119674625
+              },
+              "right": {
+                "value": 228.91193583261452
+              }
+            }
+          }
+        }
+      },
+      {
+        "maxDepth": 3,
+        "tree": {
+          "threshold": 162,
+          "left": {
+            "threshold": 81,
+            "left": {
+              "value": 200.4883278211636
+            },
+            "right": {
+              "threshold": 98,
+              "left": {
+                "value": 204.7049262743039
+              },
+              "right": {
+                "value": 201.9459963125231
+              }
+            }
+          },
+          "right": {
+            "threshold": 107,
+            "left": {
+              "threshold": 54,
+              "left": {
+                "value": 245.0171251652702
+              },
+              "right": {
+                "value": 221.98976333609036
+              }
+            },
+            "right": {
+              "threshold": 174,
+              "left": {
+                "value": 204.0408603687321
+              },
+              "right": {
+                "value": 216.82383374485343
+              }
+            }
+          }
+        }
+      },
+      {
+        "maxDepth": 3,
+        "tree": {
+          "threshold": 231,
+          "left": {
+            "threshold": 104,
+            "left": {
+              "threshold": 218,
+              "left": {
+                "value": 202.67890136982803
+              },
+              "right": {
+                "value": 251.18892524089947
+              }
+            },
+            "right": {
+              "threshold": 217,
+              "left": {
+                "value": 215.85707930784338
+              },
+              "right": {
+                "value": 225.65447472842777
+              }
+            }
+          },
+          "right": {
+            "threshold": 19,
+            "left": {
+              "threshold": 204,
+              "left": {
+                "value": 241.21682032254225
+              },
+              "right": {
+                "value": 249.87722251784362
+              }
+            },
+            "right": {
+              "value": 220.31508583132643
+            }
+          }
+        }
+      },
+      {
+        "maxDepth": 3,
+        "tree": {
+          "threshold": 78,
+          "left": {
+            "threshold": 193,
+            "left": {
+              "threshold": 103,
+              "left": {
+                "value": 235.33958866392135
+              },
+              "right": {
+                "value": 216.49681717318637
+              }
+            },
+            "right": {
+              "threshold": 60,
+              "left": {
+                "value": 252.86305650567712
+              },
+              "right": {
+                "value": 227.71784763186304
+              }
+            }
+          },
+          "right": {
+            "threshold": 212,
+            "left": {
+              "threshold": 86,
+              "left": {
+                "value": 203.84446523573243
+              },
+              "right": {
+                "value": 200.5940823358415
+              }
+            },
+            "right": {
+              "threshold": 65,
+              "left": {
+                "value": 223.4520095875618
+              },
+              "right": {
+                "value": 201.83510978788064
+              }
+            }
+          }
+        }
+      },
+      {
+        "maxDepth": 3,
+        "tree": {
+          "threshold": 50,
+          "left": {
+            "threshold": 183,
+            "left": {
+              "threshold": 65,
+              "left": {
+                "value": 224.1909062244761
+              },
+              "right": {
+                "value": 213.1360066360511
+              }
+            },
+            "right": {
+              "threshold": 49,
+              "left": {
+                "value": 248.50426972246274
+              },
+              "right": {
+                "value": 226.94711670777934
+              }
+            }
+          },
+          "right": {
+            "threshold": 213,
+            "left": {
+              "threshold": 64,
+              "left": {
+                "value": 213.91395284019492
+              },
+              "right": {
+                "value": 201.64574405780934
+              }
+            },
+            "right": {
+              "threshold": 126,
+              "left": {
+                "value": 250.72491431834206
+              },
+              "right": {
+                "value": 224.3324335927018
+              }
+            }
+          }
+        }
+      },
+      {
+        "maxDepth": 3,
+        "tree": {
+          "threshold": 187,
+          "left": {
+            "threshold": 149,
+            "left": {
+              "value": 252.25681730393285
+            },
+            "right": {
+              "threshold": 30,
+              "left": {
+                "value": 225.11397345076864
+              },
+              "right": {
+                "value": 203.07569943458466
+              }
+            }
+          },
+          "right": {
+            "threshold": 216,
+            "left": {
+              "value": 251.09388745988252
+            },
+            "right": {
+              "value": 253.20648948201654
+            }
+          }
+        }
+      },
+      {
+        "maxDepth": 3,
+        "tree": {
+          "threshold": 170,
+          "left": {
+            "threshold": 107,
+            "left": {
+              "threshold": 192,
+              "left": {
+                "value": 218.0766998881191
+              },
+              "right": {
+                "value": 224.76482740221144
+              }
+            },
+            "right": {
+              "threshold": 143,
+              "left": {
+                "value": 205.01549876612762
+              },
+              "right": {
+                "value": 215.87284848122485
+              }
+            }
+          },
+          "right": {
+            "threshold": 36,
+            "left": {
+              "threshold": 49,
+              "left": {
+                "value": 242.91386451894013
+              },
+              "right": {
+                "value": 229.28267833709165
+              }
+            },
+            "right": {
+              "threshold": 247,
+              "left": {
+                "value": 212.3552099051693
+              },
+              "right": {
+                "value": 241.4824020761646
+              }
+            }
+          }
+        }
+      },
+      {
+        "maxDepth": 3,
+        "tree": {
+          "threshold": 40,
+          "left": {
+            "threshold": 178,
+            "left": {
+              "threshold": 7,
+              "left": {
+                "value": 224.3550008824042
+              },
+              "right": {
+                "value": 205.23842496340941
+              }
+            },
+            "right": {
+              "threshold": 15,
+              "left": {
+                "value": 244.0340164322731
+              },
+              "right": {
+                "value": 225.56491910998318
+              }
+            }
+          },
+          "right": {
+            "threshold": 181,
+            "left": {
+              "threshold": 62,
+              "left": {
+                "value": 218.22203325333692
+              },
+              "right": {
+                "value": 200.7254563015906
+              }
+            },
+            "right": {
+              "threshold": 90,
+              "left": {
+                "value": 249.7811552325068
+              },
+              "right": {
+                "value": 224.033317538201
+              }
+            }
+          }
+        }
+      }
+    ],
+    "isTrained": true
+  }
+}

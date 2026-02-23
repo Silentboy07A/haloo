@@ -1,0 +1,98 @@
+{
+    "name": "SaveHydroo Sensor Controller",
+    "author": "SaveHydroo",
+    "pins": [
+        "TEMP1",
+        "TEMP2",
+        "TEMP3",
+        "TDS1",
+        "TDS2",
+        "TDS3",
+        "LEVEL1",
+        "LEVEL2",
+        "LEVEL3"
+    ],
+    "controls": [
+        {
+            "id": "temp1",
+            "label": "RO Reject Temp (°C)",
+            "type": "range",
+            "min": 15,
+            "max": 40,
+            "step": 0.5,
+            "defaultValue": 28
+        },
+        {
+            "id": "temp2",
+            "label": "Rainwater Temp (°C)",
+            "type": "range",
+            "min": 15,
+            "max": 40,
+            "step": 0.5,
+            "defaultValue": 24
+        },
+        {
+            "id": "temp3",
+            "label": "Blended Temp (°C)",
+            "type": "range",
+            "min": 15,
+            "max": 40,
+            "step": 0.5,
+            "defaultValue": 26
+        },
+        {
+            "id": "tds1",
+            "label": "RO Reject TDS (ppm)",
+            "type": "range",
+            "min": 0,
+            "max": 2000,
+            "step": 10,
+            "defaultValue": 1200
+        },
+        {
+            "id": "tds2",
+            "label": "Rainwater TDS (ppm)",
+            "type": "range",
+            "min": 0,
+            "max": 200,
+            "step": 5,
+            "defaultValue": 50
+        },
+        {
+            "id": "tds3",
+            "label": "Blended TDS (ppm)",
+            "type": "range",
+            "min": 0,
+            "max": 800,
+            "step": 10,
+            "defaultValue": 300
+        },
+        {
+            "id": "level1",
+            "label": "RO Reject Level (cm)",
+            "type": "range",
+            "min": 2,
+            "max": 400,
+            "step": 1,
+            "defaultValue": 15
+        },
+        {
+            "id": "level2",
+            "label": "Rainwater Level (cm)",
+            "type": "range",
+            "min": 2,
+            "max": 400,
+            "step": 1,
+            "defaultValue": 20
+        },
+        {
+            "id": "level3",
+            "label": "Blended Level (cm)",
+            "type": "range",
+            "min": 2,
+            "max": 400,
+            "step": 1,
+            "defaultValue": 25
+        }
+    ]
+}

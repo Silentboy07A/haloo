@@ -1,0 +1,12 @@
+[wokwi]
+version = 1
+firmware = "main.ino"
+elf = ""
+
+# Wokwi simulation configuration for SaveHydroo
+# This configures the virtual hardware simulation
+
+[env]
+# Environment variables for simulation
+SIMULATION_MODE = "deterministic"
+UPDATE_INTERVAL_MS = "2000"

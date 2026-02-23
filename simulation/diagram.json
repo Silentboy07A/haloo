@@ -1,0 +1,289 @@
+{
+    "version": 1,
+    "author": "SaveHydroo",
+    "editor": "vscode",
+    "parts": [
+        {
+            "type": "wokwi-esp32-devkit-v1",
+            "id": "esp32",
+            "top": 0,
+            "left": 0,
+            "attrs": {}
+        },
+        {
+            "type": "wokwi-hc-sr04",
+            "id": "ultrasonic1",
+            "top": -100,
+            "left": 50,
+            "attrs": {
+                "distance": "15"
+            },
+            "label": "RO Reject Level"
+        },
+        {
+            "type": "wokwi-hc-sr04",
+            "id": "ultrasonic2",
+            "top": -100,
+            "left": 150,
+            "attrs": {
+                "distance": "20"
+            },
+            "label": "Rainwater Level"
+        },
+        {
+            "type": "wokwi-hc-sr04",
+            "id": "ultrasonic3",
+            "top": -100,
+            "left": 250,
+            "attrs": {
+                "distance": "25"
+            },
+            "label": "Blended Level"
+        },
+        {
+            "type": "wokwi-dht22",
+            "id": "dht1",
+            "top": 150,
+            "left": 50,
+            "attrs": {
+                "temperature": "28",
+                "humidity": "65"
+            },
+            "label": "RO Reject Temp"
+        },
+        {
+            "type": "wokwi-dht22",
+            "id": "dht2",
+            "top": 150,
+            "left": 150,
+            "attrs": {
+                "temperature": "24",
+                "humidity": "70"
+            },
+            "label": "Rainwater Temp"
+        },
+        {
+            "type": "wokwi-dht22",
+            "id": "dht3",
+            "top": 150,
+            "left": 250,
+            "attrs": {
+                "temperature": "26",
+                "humidity": "68"
+            },
+            "label": "Blended Temp"
+        },
+        {
+            "type": "wokwi-potentiometer",
+            "id": "tds1",
+            "top": 200,
+            "left": 50,
+            "attrs": {
+                "value": "75"
+            },
+            "label": "RO Reject TDS (Analog)"
+        },
+        {
+            "type": "wokwi-potentiometer",
+            "id": "tds2",
+            "top": 200,
+            "left": 150,
+            "attrs": {
+                "value": "10"
+            },
+            "label": "Rainwater TDS (Analog)"
+        },
+        {
+            "type": "wokwi-potentiometer",
+            "id": "tds3",
+            "top": 200,
+            "left": 250,
+            "attrs": {
+                "value": "30"
+            },
+            "label": "Blended TDS (Analog)"
+        }
+    ],
+    "connections": [
+        [
+            "esp32:GND.1",
+            "ultrasonic1:GND",
+            "black",
+            []
+        ],
+        [
+            "esp32:3V3",
+            "ultrasonic1:VCC",
+            "red",
+            []
+        ],
+        [
+            "esp32:D16",
+            "ultrasonic1:TRIG",
+            "green",
+            []
+        ],
+        [
+            "esp32:D17",
+            "ultrasonic1:ECHO",
+            "blue",
+            []
+        ],
+        [
+            "esp32:GND.2",
+            "ultrasonic2:GND",
+            "black",
+            []
+        ],
+        [
+            "esp32:3V3",
+            "ultrasonic2:VCC",
+            "red",
+            []
+        ],
+        [
+            "esp32:D18",
+            "ultrasonic2:TRIG",
+            "green",
+            []
+        ],
+        [
+            "esp32:D19",
+            "ultrasonic2:ECHO",
+            "blue",
+            []
+        ],
+        [
+            "esp32:GND.3",
+            "ultrasonic3:GND",
+            "black",
+            []
+        ],
+        [
+            "esp32:3V3",
+            "ultrasonic3:VCC",
+            "red",
+            []
+        ],
+        [
+            "esp32:D21",
+            "ultrasonic3:TRIG",
+            "green",
+            []
+        ],
+        [
+            "esp32:D22",
+            "ultrasonic3:ECHO",
+            "blue",
+            []
+        ],
+        [
+            "esp32:GND.4",
+            "dht1:GND",
+            "black",
+            []
+        ],
+        [
+            "esp32:3V3",
+            "dht1:VCC",
+            "red",
+            []
+        ],
+        [
+            "esp32:D4",
+            "dht1:DATA",
+            "yellow",
+            []
+        ],
+        [
+            "esp32:GND.5",
+            "dht2:GND",
+            "black",
+            []
+        ],
+        [
+            "esp32:3V3",
+            "dht2:VCC",
+            "red",
+            []
+        ],
+        [
+            "esp32:D5",
+            "dht2:DATA",
+            "yellow",
+            []
+        ],
+        [
+            "esp32:GND.6",
+            "dht3:GND",
+            "black",
+            []
+        ],
+        [
+            "esp32:3V3",
+            "dht3:VCC",
+            "red",
+            []
+        ],
+        [
+            "esp32:D15",
+            "dht3:DATA",
+            "yellow",
+            []
+        ],
+        [
+            "esp32:GND.7",
+            "tds1:GND",
+            "black",
+            []
+        ],
+        [
+            "esp32:3V3",
+            "tds1:VCC",
+            "red",
+            []
+        ],
+        [
+            "esp32:D34",
+            "tds1:SIG",
+            "orange",
+            []
+        ],
+        [
+            "esp32:GND.8",
+            "tds2:GND",
+            "black",
+            []
+        ],
+        [
+            "esp32:3V3",
+            "tds2:VCC",
+            "red",
+            []
+        ],
+        [
+            "esp32:D35",
+            "tds2:SIG",
+            "orange",
+            []
+        ],
+        [
+            "esp32:GND.9",
+            "tds3:GND",
+            "black",
+            []
+        ],
+        [
+            "esp32:3V3",
+            "tds3:VCC",
+            "red",
+            []
+        ],
+        [
+            "esp32:D32",
+            "tds3:SIG",
+            "orange",
+            []
+        ]
+    ]
+}

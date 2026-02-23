@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="SaveHydroo - Smart Water Blending and Monitoring System">
+    <title>SaveHydroo | Smart Water Management</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+
+<body>
+    <div id="app">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="nav-brand">
+                <span class="logo">💧</span>
+                <span class="brand-name">SaveHydroo</span>
+            </div>
+            <div class="nav-menu">
+                <a href="#dashboard" class="nav-link active" data-tab="dashboard">Dashboard</a>
+                <a href="#analytics" class="nav-link" data-tab="analytics">Analytics</a>
+                <a href="#gamification" class="nav-link" data-tab="gamification">Rewards</a>
+                <a href="#wallet" class="nav-link" data-tab="wallet">Wallet</a>
+            </div>
+            <div class="nav-user">
+                <div class="user-stats">
+                    <span class="stat-badge" id="user-points">0 pts</span>
+                    <span class="stat-badge level" id="user-level">Lvl 1</span>
+                </div>
+                <div class="user-avatar" id="user-avatar">
+                    <span>👤</span>
+                </div>
+                <button class="btn-auth" id="auth-btn">Login</button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard Tab -->
+            <section id="dashboard" class="tab-content active">
+                <!-- Status Bar -->
+                <div class="status-bar">
+                    <div class="status-item">
+                        <span class="status-icon">📡</span>
+                        <span class="status-label">Simulation</span>
+                        <span class="status-value" id="sim-status">Connecting...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-icon">⏱️</span>
+                        <span class="status-label">Last Update</span>
+                        <span class="status-value" id="last-update">--</span>
+                    </div>
+                    <div class="status-item predictions">
+                        <span class="status-icon">🎯</span>
+                        <span class="status-label">Target TDS</span>
+                        <span class="status-value" id="target-tds">150-300 ppm</span>
+                    </div>
+                </div>
+
+                <!-- Tank Display Grid -->
+                <div class="tanks-grid">
+                    <!-- RO Reject Tank -->
+                    <div class="tank-card" id="tank-ro">
+                        <div class="tank-header">
+                            <span class="tank-icon">🔄</span>
+                            <h3>RO Reject Tank</h3>
+                            <span class="flow-indicator" id="ro-flow-indicator"></span>
+                        </div>
+                        <div class="tank-visualization">
+                            <div class="tank-container">
+                                <div class="tank-fill ro-fill" id="ro-water-fill" style="height: 75%"></div>
+                                <div class="tank-level-mark" style="bottom: 25%"></div>
+                                <div class="tank-level-mark" style="bottom: 50%"></div>
+                                <div class="tank-level-mark" style="bottom: 75%"></div>
+                            </div>
+                            <div class="tank-percentage" id="ro-level">75%</div>
+                        </div>
+                        <div class="tank-metrics">
+                            <div class="metric">
+                                <span class="metric-label">TDS</span>
+                                <span class="metric-value" id="ro-tds">-- ppm</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">Temp</span>
+                                <span class="metric-value" id="ro-temp">--°C</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">Flow</span>
+                                <span class="metric-value" id="ro-flow">-- L/min</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Rainwater Tank -->
+                    <div class="tank-card" id="tank-rain">
+                        <div class="tank-header">
+                            <span class="tank-icon">🌧️</span>
+                            <h3>Rainwater Tank</h3>
+                            <span class="flow-indicator" id="rain-flow-indicator"></span>
+                        </div>
+                        <div class="tank-visualization">
+                            <div class="tank-container">
+                                <div class="tank-fill rain-fill" id="rain-water-fill" style="height: 60%"></div>
+                                <div class="tank-level-mark" style="bottom: 25%"></div>
+                                <div class="tank-level-mark" style="bottom: 50%"></div>
+                                <div class="tank-level-mark" style="bottom: 75%"></div>
+                            </div>
+                            <div class="tank-percentage" id="rain-level">60%</div>
+                        </div>
+                        <div class="tank-metrics">
+                            <div class="metric">
+                                <span class="metric-label">TDS</span>
+                                <span class="metric-value" id="rain-tds">-- ppm</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">Temp</span>
+                                <span class="metric-value" id="rain-temp">--°C</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">Flow</span>
+                                <span class="metric-value" id="rain-flow">-- L/min</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Blended Tank -->
+                    <div class="tank-card blended" id="tank-blend">
+                        <div class="tank-header">
+                            <span class="tank-icon">💧</span>
+                            <h3>Blended Tank</h3>
+                            <span class="optimal-badge" id="tds-status">Checking...</span>
+                        </div>
+                        <div class="tank-visualization">
+                            <div class="tank-container large">
+                                <div class="tank-fill blend-fill" id="blend-water-fill" style="height: 50%"></div>
+                                <div class="tank-level-mark" style="bottom: 25%"></div>
+                                <div class="tank-level-mark" style="bottom: 50%"></div>
+                                <div class="tank-level-mark" style="bottom: 75%"></div>
+                                <div class="optimal-zone"></div>
+                            </div>
+                            <div class="tank-percentage" id="blend-level">50%</div>
+                        </div>
+                        <div class="tank-metrics">
+                            <div class="metric highlight">
+                                <span class="metric-label">TDS</span>
+                                <span class="metric-value" id="blend-tds">-- ppm</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">Temp</span>
+                                <span class="metric-value" id="blend-temp">--°C</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">Flow</span>
+                                <span class="metric-value" id="blend-flow">-- L/min</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Predictions Panel -->
+                <div class="predictions-panel">
+                    <h3>🔮 ML Predictions</h3>
+                    <div class="predictions-grid">
+                        <div class="prediction-card">
+                            <span class="prediction-icon">📈</span>
+                            <span class="prediction-label">Predicted TDS</span>
+                            <span class="prediction-value" id="predicted-tds">--</span>
+                            <span class="prediction-trend" id="tds-trend">--</span>
+                        </div>
+                        <div class="prediction-card">
+                            <span class="prediction-icon">🎯</span>
+                            <span class="prediction-label">Time to Target</span>
+                            <span class="prediction-value" id="time-to-target">--</span>
+                        </div>
+                        <div class="prediction-card">
+                            <span class="prediction-icon">⏳</span>
+                            <span class="prediction-label">Time to Full</span>
+                            <span class="prediction-value" id="time-to-full">--</span>
+                        </div>
+                        <div class="prediction-card">
+                            <span class="prediction-icon">⚗️</span>
+                            <span class="prediction-label">Optimal Blend</span>
+                            <span class="prediction-value" id="optimal-blend">--</span>
+                        </div>
+                        <div class="prediction-card">
+                            <span class="prediction-icon">🛡️</span>
+                            <span class="prediction-label">Model Health</span>
+                            <span class="prediction-value" id="model-health">Learning...</span>
+                            <small id="model-stats" class="text-muted"
+                                style="display: block; margin-top: 4px; font-size: 0.75rem;"></small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Blend Control -->
+                <div class="blend-control-panel">
+                    <h3>⚙️ Blend Ratio Control</h3>
+                    <div class="blend-controls">
+                        <div class="blend-slider-group">
+                            <label>RO Reject: <span id="ro-ratio-display">30%</span></label>
+                            <input type="range" id="ro-ratio-slider" min="0" max="100" value="30"
+                                class="blend-slider ro-slider">
+                        </div>
+                        <div class="blend-slider-group">
+                            <label>Rainwater: <span id="rain-ratio-display">70%</span></label>
+                            <input type="range" id="rain-ratio-slider" min="0" max="100" value="70"
+                                class="blend-slider rain-slider">
+                        </div>
+                        <button class="btn-apply" id="apply-blend">Apply Blend</button>
+                        <button class="btn-optimal" id="use-optimal">Use Optimal</button>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <h3>📊 TDS Over Time</h3>
+                        <canvas id="tds-chart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>📉 Water Levels</h3>
+                        <canvas id="level-chart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Analytics Tab -->
+            <section id="analytics" class="tab-content">
+                <h2>📈 Advanced Analytics</h2>
+                <div class="analytics-grid">
+                    <div class="chart-card full-width">
+                        <h3>Temperature Trends</h3>
+                        <canvas id="temp-chart"></canvas>
+                    </div>
+                    <div class="stats-cards">
+                        <div class="stat-card">
+                            <span class="stat-number" id="total-water-saved">0 L</span>
+                            <span class="stat-label">Water Saved</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-number" id="total-rainwater">0 L</span>
+                            <span class="stat-label">Rainwater Used</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-number" id="avg-tds">-- ppm</span>
+                            <span class="stat-label">Average TDS</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-number" id="optimal-time">0%</span>
+                            <span class="stat-label">Optimal TDS Time</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Gamification Tab -->
+            <section id="gamification" class="tab-content">
+                <div class="gamification-header">
+                    <div class="user-level-card">
+                        <div class="level-icon" id="level-icon">💧</div>
+                        <div class="level-info">
+                            <h2 id="level-name">Water Beginner</h2>
+                            <div class="level-progress">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="level-progress" style="width: 0%"></div>
+                                </div>
+                                <span id="points-to-next">0 / 100 pts</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="streak-card" id="streak-card">
+                        <span class="streak-icon">🔥</span>
+                        <span class="streak-value" id="streak-days">0</span>
+                        <span class="streak-label">Day Streak</span>
+                    </div>
+                </div>
+
+                <h3>🏆 Achievements</h3>
+                <div class="achievements-grid" id="achievements-grid">
+                    <!-- Filled dynamically -->
+                </div>
+
+                <h3>🏅 Leaderboard</h3>
+                <div class="leaderboard" id="leaderboard">
+                    <!-- Filled dynamically -->
+                </div>
+            </section>
+
+            <!-- Wallet Tab -->
+            <section id="wallet" class="tab-content">
+                <div class="wallet-header">
+                    <div class="wallet-balance-card">
+                        <span class="wallet-icon">💰</span>
+                        <div class="wallet-info">
+                            <span class="wallet-label">Credit Balance</span>
+                            <span class="wallet-balance" id="wallet-balance">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>💳 Buy Credits</h3>
+                <div class="credit-packages" id="credit-packages">
+                    <div class="package-card" data-package="starter">
+                        <span class="package-name">Starter Pack</span>
+                        <span class="package-credits">100 Credits</span>
+                        <span class="package-price">₹99</span>
+                        <button class="btn-buy">Buy Now</button>
+                    </div>
+                    <div class="package-card featured" data-package="pro">
+                        <span class="package-badge">Popular</span>
+                        <span class="package-name">Pro Pack</span>
+                        <span class="package-credits">500 Credits</span>
+                        <span class="package-price">₹399</span>
+                        <button class="btn-buy">Buy Now</button>
+                    </div>
+                    <div class="package-card" data-package="ultra">
+                        <span class="package-name">Ultra Pack</span>
+                        <span class="package-credits">1500 Credits</span>
+                        <span class="package-price">₹999</span>
+                        <button class="btn-buy">Buy Now</button>
+                    </div>
+                </div>
+
+                <h3>🔓 Premium Features</h3>
+                <div class="features-grid" id="features-grid">
+                    <div class="feature-card" data-feature="advanced_analytics">
+                        <span class="feature-icon">📊</span>
+                        <span class="feature-name">Advanced Analytics</span>
+                        <span class="feature-desc">Detailed charts and reports</span>
+                        <span class="feature-price">200 Credits</span>
+                        <button class="btn-unlock">Unlock</button>
+                    </div>
+                    <div class="feature-card" data-feature="predictions_pro">
+                        <span class="feature-icon">🔮</span>
+                        <span class="feature-name">Predictions Pro</span>
+                        <span class="feature-desc">Extended ML predictions</span>
+                        <span class="feature-price">300 Credits</span>
+                        <button class="btn-unlock">Unlock</button>
+                    </div>
+                    <div class="feature-card" data-feature="export_data">
+                        <span class="feature-icon">📤</span>
+                        <span class="feature-name">Data Export</span>
+                        <span class="feature-desc">Export all your data</span>
+                        <span class="feature-price">150 Credits</span>
+                        <button class="btn-unlock">Unlock</button>
+                    </div>
+                </div>
+
+                <h3>🎁 Donate Credits</h3>
+                <div class="donate-section">
+                    <p>Donate your credits to water conservation causes and earn bonus points!</p>
+                    <div class="donate-input-group">
+                        <input type="number" id="donate-amount" placeholder="Amount" min="1">
+                        <button class="btn-donate" id="donate-btn">Donate</button>
+                    </div>
+                </div>
+
+                <h3>📜 Transaction History</h3>
+                <div class="transaction-history" id="transaction-history">
+                    <!-- Filled dynamically -->
+                </div>
+            </section>
+        </main>
+
+        <!-- Auth Modal -->
+        <div class="modal" id="auth-modal">
+            <div class="modal-content">
+                <!-- Liquid Background Element -->
+                <div class="liquid-container">
+                    <div class="liquid-wave"></div>
+                </div>
+
+                <button class="modal-close" id="modal-close">&times;</button>
+
+                <!-- Premium Header -->
+                <div class="modal-header-icon">💧</div>
+                <h2 id="auth-title">Welcome Back</h2>
+                <p class="modal-subtitle" id="auth-subtitle">Sign in to continue to SaveHydroo</p>
+
+                <!-- OAuth Buttons -->
+                <div class="oauth-buttons">
+                    <button class="btn-oauth btn-google" id="google-login">
+                        <svg class="oauth-icon" viewBox="0 0 24 24" width="20" height="20">
+                            <path fill="#4285F4"
+                                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                            <path fill="#34A853"
+                                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                            <path fill="#FBBC05"
+                                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                            <path fill="#EA4335"
+                                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                        </svg>
+                        <span>Continue with Google</span>
+                    </button>
+                    <button class="btn-oauth btn-github" id="github-login">
+                        <svg class="oauth-icon" viewBox="0 0 24 24" width="20" height="20">
+                            <path fill="currentColor"
+                                d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
+                        </svg>
+                        <span>Continue with GitHub</span>
+                    </button>
+                </div>
+
+                <div class="auth-divider">
+                    <span>or</span>
+                </div>
+
+                <form id="auth-form" class="auth-form">
+                    <div class="floating-group" id="username-group" style="display: none;">
+                        <input type="text" id="username" placeholder=" " autocomplete="off">
+                        <label for="username">Username</label>
+                    </div>
+                    <div class="floating-group">
+                        <input type="email" id="email" placeholder=" " required autocomplete="email">
+                        <label for="email">Email Address</label>
+                    </div>
+                    <div class="floating-group">
+                        <input type="password" id="password" placeholder=" " required autocomplete="current-password">
+                        <label for="password">Password</label>
+                    </div>
+                    <div class="form-options">
+                        <a href="#" class="forgot-link">Forgot Password?</a>
+                    </div>
+                    <button type="submit" class="btn-primary" id="auth-submit">
+                        <span class="btn-text">Sign In</span>
+                        <span class="btn-glow"></span>
+                    </button>
+                </form>
+                <p class="auth-toggle">
+                    <span id="auth-toggle-text">Don't have an account?</span>
+                    <a href="#" id="auth-toggle-link">Create Account</a>
+                </p>
+            </div>
+        </div>
+
+        <!-- Toast Notifications -->
+        <div class="toast-container" id="toast-container"></div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script src="js/gamification.js"></script>
+    <script src="js/payments.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>
