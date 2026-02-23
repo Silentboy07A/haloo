@@ -29,19 +29,36 @@ const Dashboard = {
 
     // Load pre-trained model from build process
     async loadPreTrainedModel() {
+        const badge = document.getElementById('model-health');
+        const stats = document.getElementById('model-stats');
+
         try {
+            if (badge) badge.textContent = 'Loading...';
+
             const response = await fetch('data/trained-model.json');
-            if (!response.ok) throw new Error('Model not found');
+            if (!response.ok) {
+                if (response.status === 404) {
+                    console.warn('⚠️ Trained model not found. This is expected if the first build is still running.');
+                }
+                throw new Error(`Model fetch failed: ${response.status}`);
+            }
+
             const data = await response.json();
 
             if (data.forest) {
-                // Initialize global predictor with trained forest
                 const globalForest = RandomRainForest.fromJSON(data.forest);
                 console.log('🌲 Global model loaded. Trained at:', data.trainedAt);
                 this.updateModelStatus(data);
             }
         } catch (err) {
-            console.warn('⚠️ No pre-trained model found. Initializing fresh forest.', err);
+            console.error('❌ Model load error:', err);
+            if (badge) {
+                badge.textContent = 'Real-time';
+                badge.classList.remove('optimal');
+            }
+            if (stats) {
+                stats.textContent = 'Syncing from local sensor stream...';
+            }
         }
     },
 
@@ -51,7 +68,7 @@ const Dashboard = {
         if (badge && stats) {
             badge.textContent = 'Pre-trained ✓';
             badge.classList.add('optimal');
-            stats.textContent = `RMSE: ${data.metrics.rmse} | Samples: ${data.metrics.samples}`;
+            stats.textContent = `RMSE: ${data.metrics.rmse.toFixed(4)} | n=${data.metrics.samples}`;
         }
     },
 
