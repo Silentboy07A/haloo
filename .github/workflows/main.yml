@@ -89,7 +89,7 @@ jobs:
         uses: azure/container-apps-deploy-action@v1
         with:
           appSourcePath: ${{ github.workspace }}
-          acrName: ${{ secrets.REGISTRY_LOGIN_SERVER }}
+          acrName: ${{ secrets.REGISTRY_USERNAME }}
           acrUsername: ${{ secrets.REGISTRY_USERNAME }}
           acrPassword: ${{ secrets.REGISTRY_PASSWORD }}
           containerAppName: ${{ env.CONTAINER_APP_NAME }}
