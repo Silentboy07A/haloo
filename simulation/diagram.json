@@ -1,289 +1,491 @@
 {
     "version": 1,
-    "author": "SaveHydroo",
-    "editor": "vscode",
+    "author": "SaveHydro",
+    "editor": "wokwi",
     "parts": [
         {
-            "type": "wokwi-esp32-devkit-v1",
-            "id": "esp32",
+            "type": "board-esp32-devkit-c-v4",
+            "id": "esp",
             "top": 0,
             "left": 0,
             "attrs": {}
         },
         {
-            "type": "wokwi-hc-sr04",
-            "id": "ultrasonic1",
-            "top": -100,
-            "left": 50,
-            "attrs": {
-                "distance": "15"
-            },
-            "label": "RO Reject Level"
-        },
-        {
-            "type": "wokwi-hc-sr04",
-            "id": "ultrasonic2",
-            "top": -100,
-            "left": 150,
-            "attrs": {
-                "distance": "20"
-            },
-            "label": "Rainwater Level"
-        },
-        {
-            "type": "wokwi-hc-sr04",
-            "id": "ultrasonic3",
-            "top": -100,
-            "left": 250,
-            "attrs": {
-                "distance": "25"
-            },
-            "label": "Blended Level"
-        },
-        {
-            "type": "wokwi-dht22",
-            "id": "dht1",
-            "top": 150,
-            "left": 50,
-            "attrs": {
-                "temperature": "28",
-                "humidity": "65"
-            },
-            "label": "RO Reject Temp"
-        },
-        {
-            "type": "wokwi-dht22",
-            "id": "dht2",
-            "top": 150,
-            "left": 150,
-            "attrs": {
-                "temperature": "24",
-                "humidity": "70"
-            },
-            "label": "Rainwater Temp"
-        },
-        {
-            "type": "wokwi-dht22",
-            "id": "dht3",
-            "top": 150,
-            "left": 250,
-            "attrs": {
-                "temperature": "26",
-                "humidity": "68"
-            },
-            "label": "Blended Temp"
-        },
-        {
             "type": "wokwi-potentiometer",
             "id": "tds1",
-            "top": 200,
-            "left": 50,
-            "attrs": {
-                "value": "75"
-            },
-            "label": "RO Reject TDS (Analog)"
+            "top": -200,
+            "left": -300,
+            "attrs": {}
         },
         {
             "type": "wokwi-potentiometer",
             "id": "tds2",
-            "top": 200,
-            "left": 150,
-            "attrs": {
-                "value": "10"
-            },
-            "label": "Rainwater TDS (Analog)"
+            "top": -100,
+            "left": -300,
+            "attrs": {}
         },
         {
             "type": "wokwi-potentiometer",
             "id": "tds3",
-            "top": 200,
-            "left": 250,
+            "top": 0,
+            "left": -300,
+            "attrs": {}
+        },
+        {
+            "type": "wokwi-potentiometer",
+            "id": "temp1",
+            "top": -200,
+            "left": -150,
+            "attrs": {}
+        },
+        {
+            "type": "wokwi-potentiometer",
+            "id": "temp2",
+            "top": -100,
+            "left": -150,
+            "attrs": {}
+        },
+        {
+            "type": "wokwi-potentiometer",
+            "id": "temp3",
+            "top": 0,
+            "left": -150,
+            "attrs": {}
+        },
+        {
+            "type": "wokwi-potentiometer",
+            "id": "turb1",
+            "top": -200,
+            "left": -450,
+            "attrs": {}
+        },
+        {
+            "type": "wokwi-potentiometer",
+            "id": "turb2",
+            "top": -100,
+            "left": -450,
+            "attrs": {}
+        },
+        {
+            "type": "wokwi-potentiometer",
+            "id": "turb3",
+            "top": 0,
+            "left": -450,
+            "attrs": {}
+        },
+        {
+            "type": "wokwi-potentiometer",
+            "id": "flow1",
+            "top": -200,
+            "left": -600,
+            "attrs": {}
+        },
+        {
+            "type": "wokwi-potentiometer",
+            "id": "flow2",
+            "top": -100,
+            "left": -600,
+            "attrs": {}
+        },
+        {
+            "type": "wokwi-potentiometer",
+            "id": "flow3",
+            "top": 0,
+            "left": -600,
+            "attrs": {}
+        },
+        {
+            "type": "wokwi-hc-sr04",
+            "id": "ultra1",
+            "top": -200,
+            "left": 200,
             "attrs": {
-                "value": "30"
-            },
-            "label": "Blended TDS (Analog)"
+                "distance": "15"
+            }
+        },
+        {
+            "type": "wokwi-hc-sr04",
+            "id": "ultra2",
+            "top": -100,
+            "left": 200,
+            "attrs": {
+                "distance": "20"
+            }
+        },
+        {
+            "type": "wokwi-hc-sr04",
+            "id": "ultra3",
+            "top": 0,
+            "left": 200,
+            "attrs": {
+                "distance": "25"
+            }
+        },
+        {
+            "type": "wokwi-resistor",
+            "id": "r1",
+            "top": 100,
+            "left": 200,
+            "attrs": {
+                "value": "1000"
+            }
+        },
+        {
+            "type": "wokwi-resistor",
+            "id": "r2",
+            "top": 150,
+            "left": 200,
+            "attrs": {
+                "value": "1000"
+            }
+        },
+        {
+            "type": "wokwi-resistor",
+            "id": "r3",
+            "top": 200,
+            "left": 200,
+            "attrs": {
+                "value": "1000"
+            }
         }
     ],
     "connections": [
         [
-            "esp32:GND.1",
-            "ultrasonic1:GND",
-            "black",
+            "esp:TX",
+            "$serialMonitor:RX",
+            "",
             []
         ],
         [
-            "esp32:3V3",
-            "ultrasonic1:VCC",
-            "red",
+            "esp:RX",
+            "$serialMonitor:TX",
+            "",
             []
         ],
         [
-            "esp32:D16",
-            "ultrasonic1:TRIG",
-            "green",
-            []
-        ],
-        [
-            "esp32:D17",
-            "ultrasonic1:ECHO",
-            "blue",
-            []
-        ],
-        [
-            "esp32:GND.2",
-            "ultrasonic2:GND",
-            "black",
-            []
-        ],
-        [
-            "esp32:3V3",
-            "ultrasonic2:VCC",
-            "red",
-            []
-        ],
-        [
-            "esp32:D18",
-            "ultrasonic2:TRIG",
-            "green",
-            []
-        ],
-        [
-            "esp32:D19",
-            "ultrasonic2:ECHO",
-            "blue",
-            []
-        ],
-        [
-            "esp32:GND.3",
-            "ultrasonic3:GND",
-            "black",
-            []
-        ],
-        [
-            "esp32:3V3",
-            "ultrasonic3:VCC",
-            "red",
-            []
-        ],
-        [
-            "esp32:D21",
-            "ultrasonic3:TRIG",
-            "green",
-            []
-        ],
-        [
-            "esp32:D22",
-            "ultrasonic3:ECHO",
-            "blue",
-            []
-        ],
-        [
-            "esp32:GND.4",
-            "dht1:GND",
-            "black",
-            []
-        ],
-        [
-            "esp32:3V3",
-            "dht1:VCC",
-            "red",
-            []
-        ],
-        [
-            "esp32:D4",
-            "dht1:DATA",
-            "yellow",
-            []
-        ],
-        [
-            "esp32:GND.5",
-            "dht2:GND",
-            "black",
-            []
-        ],
-        [
-            "esp32:3V3",
-            "dht2:VCC",
-            "red",
-            []
-        ],
-        [
-            "esp32:D5",
-            "dht2:DATA",
-            "yellow",
-            []
-        ],
-        [
-            "esp32:GND.6",
-            "dht3:GND",
-            "black",
-            []
-        ],
-        [
-            "esp32:3V3",
-            "dht3:VCC",
-            "red",
-            []
-        ],
-        [
-            "esp32:D15",
-            "dht3:DATA",
-            "yellow",
-            []
-        ],
-        [
-            "esp32:GND.7",
-            "tds1:GND",
-            "black",
-            []
-        ],
-        [
-            "esp32:3V3",
-            "tds1:VCC",
-            "red",
-            []
-        ],
-        [
-            "esp32:D34",
             "tds1:SIG",
-            "orange",
+            "esp:34",
+            "green",
             []
         ],
         [
-            "esp32:GND.8",
-            "tds2:GND",
-            "black",
-            []
-        ],
-        [
-            "esp32:3V3",
-            "tds2:VCC",
-            "red",
-            []
-        ],
-        [
-            "esp32:D35",
             "tds2:SIG",
+            "esp:35",
+            "green",
+            []
+        ],
+        [
+            "tds3:SIG",
+            "esp:32",
+            "green",
+            []
+        ],
+        [
+            "temp1:SIG",
+            "esp:33",
             "orange",
             []
         ],
         [
-            "esp32:GND.9",
-            "tds3:GND",
-            "black",
+            "temp2:SIG",
+            "esp:36",
+            "orange",
             []
         ],
         [
-            "esp32:3V3",
-            "tds3:VCC",
+            "temp3:SIG",
+            "esp:39",
+            "orange",
+            []
+        ],
+        [
+            "turb1:SIG",
+            "esp:25",
+            "yellow",
+            []
+        ],
+        [
+            "turb2:SIG",
+            "esp:26",
+            "yellow",
+            []
+        ],
+        [
+            "turb3:SIG",
+            "esp:27",
+            "yellow",
+            []
+        ],
+        [
+            "flow1:SIG",
+            "esp:13",
+            "cyan",
+            []
+        ],
+        [
+            "flow2:SIG",
+            "esp:14",
+            "cyan",
+            []
+        ],
+        [
+            "flow3:SIG",
+            "esp:15",
+            "cyan",
+            []
+        ],
+        [
+            "ultra1:TRIG",
+            "esp:16",
+            "blue",
+            []
+        ],
+        [
+            "ultra1:ECHO",
+            "esp:17",
+            "purple",
+            []
+        ],
+        [
+            "ultra2:TRIG",
+            "esp:18",
+            "blue",
+            []
+        ],
+        [
+            "ultra2:ECHO",
+            "esp:19",
+            "purple",
+            []
+        ],
+        [
+            "ultra3:TRIG",
+            "esp:21",
+            "blue",
+            []
+        ],
+        [
+            "ultra3:ECHO",
+            "esp:22",
+            "purple",
+            []
+        ],
+        [
+            "r1:1",
+            "esp:3V3",
             "red",
             []
         ],
         [
-            "esp32:D32",
-            "tds3:SIG",
-            "orange",
+            "r1:2",
+            "esp:4",
+            "white",
+            []
+        ],
+        [
+            "r2:1",
+            "esp:3V3",
+            "red",
+            []
+        ],
+        [
+            "r2:2",
+            "esp:5",
+            "white",
+            []
+        ],
+        [
+            "r3:1",
+            "esp:3V3",
+            "red",
+            []
+        ],
+        [
+            "r3:2",
+            "esp:23",
+            "white",
+            []
+        ],
+        [
+            "tds1:VCC",
+            "esp:3V3",
+            "red",
+            []
+        ],
+        [
+            "tds2:VCC",
+            "esp:3V3",
+            "red",
+            []
+        ],
+        [
+            "tds3:VCC",
+            "esp:3V3",
+            "red",
+            []
+        ],
+        [
+            "tds1:GND",
+            "esp:GND",
+            "black",
+            []
+        ],
+        [
+            "tds2:GND",
+            "esp:GND",
+            "black",
+            []
+        ],
+        [
+            "tds3:GND",
+            "esp:GND",
+            "black",
+            []
+        ],
+        [
+            "temp1:VCC",
+            "esp:3V3",
+            "red",
+            []
+        ],
+        [
+            "temp2:VCC",
+            "esp:3V3",
+            "red",
+            []
+        ],
+        [
+            "temp3:VCC",
+            "esp:3V3",
+            "red",
+            []
+        ],
+        [
+            "temp1:GND",
+            "esp:GND",
+            "black",
+            []
+        ],
+        [
+            "temp2:GND",
+            "esp:GND",
+            "black",
+            []
+        ],
+        [
+            "temp3:GND",
+            "esp:GND",
+            "black",
+            []
+        ],
+        [
+            "turb1:VCC",
+            "esp:3V3",
+            "red",
+            []
+        ],
+        [
+            "turb2:VCC",
+            "esp:3V3",
+            "red",
+            []
+        ],
+        [
+            "turb3:VCC",
+            "esp:3V3",
+            "red",
+            []
+        ],
+        [
+            "turb1:GND",
+            "esp:GND",
+            "black",
+            []
+        ],
+        [
+            "turb2:GND",
+            "esp:GND",
+            "black",
+            []
+        ],
+        [
+            "turb3:GND",
+            "esp:GND",
+            "black",
+            []
+        ],
+        [
+            "flow1:VCC",
+            "esp:3V3",
+            "red",
+            []
+        ],
+        [
+            "flow2:VCC",
+            "esp:3V3",
+            "red",
+            []
+        ],
+        [
+            "flow3:VCC",
+            "esp:3V3",
+            "red",
+            []
+        ],
+        [
+            "flow1:GND",
+            "esp:GND",
+            "black",
+            []
+        ],
+        [
+            "flow2:GND",
+            "esp:GND",
+            "black",
+            []
+        ],
+        [
+            "flow3:GND",
+            "esp:GND",
+            "black",
+            []
+        ],
+        [
+            "ultra1:VCC",
+            "esp:5V",
+            "red",
+            []
+        ],
+        [
+            "ultra2:VCC",
+            "esp:5V",
+            "red",
+            []
+        ],
+        [
+            "ultra3:VCC",
+            "esp:5V",
+            "red",
+            []
+        ],
+        [
+            "ultra1:GND",
+            "esp:GND",
+            "black",
+            []
+        ],
+        [
+            "ultra2:GND",
+            "esp:GND",
+            "black",
+            []
+        ],
+        [
+            "ultra3:GND",
+            "esp:GND",
+            "black",
             []
         ]
-    ]
+    ],
+    "dependencies": {}
 }

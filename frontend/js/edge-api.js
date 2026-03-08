@@ -79,6 +79,30 @@ const EdgeAPI = {
         });
     },
 
+    // Get historical readings for charts directly from Supabase REST API
+    async getHistoricalReadings(limit = 50) {
+        try {
+            const url = `${SUPABASE_URL}/rest/v1/sensor_readings?select=*&limit=${limit}&order=timestamp.desc`;
+
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': SUPABASE_ANON_KEY
+                }
+            });
+
+            if (!response.ok) return [];
+
+            const data = await response.json();
+            // Data is sorted descending (newest first). We need ascending (oldest first) for the charts.
+            return data.reverse();
+        } catch (e) {
+            console.error('Failed to fetch historical data:', e);
+            return [];
+        }
+    },
+
     // ============================================
     // ML PREDICTION ENDPOINTS
     // ============================================

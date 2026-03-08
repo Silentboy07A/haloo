@@ -43,21 +43,11 @@
             <!-- Dashboard Tab -->
             <section id="dashboard" class="tab-content active">
                 <!-- Status Bar -->
-                <div class="status-bar">
-                    <div class="status-item">
-                        <span class="status-icon">📡</span>
-                        <span class="status-label">Simulation</span>
-                        <span class="status-value" id="sim-status">Connecting...</span>
-                    </div>
+                <div class="status-bar" style="justify-content: center;">
                     <div class="status-item">
                         <span class="status-icon">⏱️</span>
                         <span class="status-label">Last Update</span>
                         <span class="status-value" id="last-update">--</span>
-                    </div>
-                    <div class="status-item predictions">
-                        <span class="status-icon">🎯</span>
-                        <span class="status-label">Target TDS</span>
-                        <span class="status-value" id="target-tds">150-300 ppm</span>
                     </div>
                 </div>
 
@@ -197,27 +187,16 @@
                     </div>
                 </div>
 
-                <!-- Blend Control -->
-                <div class="blend-control-panel">
-                    <h3>⚙️ Blend Ratio Control</h3>
-                    <div class="blend-controls">
-                        <div class="blend-slider-group">
-                            <label>RO Reject: <span id="ro-ratio-display">30%</span></label>
-                            <input type="range" id="ro-ratio-slider" min="0" max="100" value="30"
-                                class="blend-slider ro-slider">
-                        </div>
-                        <div class="blend-slider-group">
-                            <label>Rainwater: <span id="rain-ratio-display">70%</span></label>
-                            <input type="range" id="rain-ratio-slider" min="0" max="100" value="70"
-                                class="blend-slider rain-slider">
-                        </div>
-                        <button class="btn-apply" id="apply-blend">Apply Blend</button>
-                        <button class="btn-optimal" id="use-optimal">Use Optimal</button>
-                    </div>
-                </div>
 
-                <!-- Charts -->
-                <div class="charts-grid">
+
+            </section>
+
+            <!-- Analytics Tab -->
+            <section id="analytics" class="tab-content">
+                <h2>📈 Advanced Analytics</h2>
+
+                <!-- Main Charts -->
+                <div class="charts-grid" style="margin-bottom: 2rem;">
                     <div class="chart-card">
                         <h3>📊 TDS Over Time</h3>
                         <canvas id="tds-chart"></canvas>
@@ -227,11 +206,6 @@
                         <canvas id="level-chart"></canvas>
                     </div>
                 </div>
-            </section>
-
-            <!-- Analytics Tab -->
-            <section id="analytics" class="tab-content">
-                <h2>📈 Advanced Analytics</h2>
                 <div class="analytics-grid">
                     <div class="chart-card full-width">
                         <h3>Temperature Trends</h3>

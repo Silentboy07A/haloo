@@ -113,11 +113,14 @@ const Dashboard = {
     },
 
     // Start dashboard updates
-    start() {
+    async start() {
         if (this.isRunning) return;
 
         this.isRunning = true;
         this.updateStatus('Running');
+
+        // Initial historical load for charts
+        await this._loadHistoricalData();
 
         // Initial update
         this.update();
@@ -213,6 +216,53 @@ const Dashboard = {
         }
         if (source === 'db') {
             Toast.show('🟢 Switched to live sensor data from Wokwi!', 'success', 3000);
+        }
+    },
+
+    // Pre-fill charts with historical data from the DB if available
+    async _loadHistoricalData() {
+        const isLoggedIn = window.EdgeAPI && EdgeAPI.userId && !EdgeAPI.userId.startsWith('demo');
+        if (!isLoggedIn) return;
+
+        try {
+            const history = await EdgeAPI.getHistoricalReadings(50); // Get last 50 points
+            if (history && history.length > 0) {
+                // We'll reconstruct the grouped structure the charts expect
+                const historyByTimestamp = {};
+
+                history.forEach(reading => {
+                    const time = new Date(reading.timestamp).toLocaleTimeString('en-US', {
+                        hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit'
+                    });
+
+                    if (!historyByTimestamp[time]) {
+                        historyByTimestamp[time] = {
+                            ro_reject: { tds: 0, level: 0, temperature: 0 },
+                            rainwater: { tds: 0, level: 0, temperature: 0 },
+                            blended: { tds: 0, level: 0, temperature: 0 }
+                        };
+                    }
+
+                    if (reading.tank_type === 'ro_reject' || reading.tank_type === 'rainwater' || reading.tank_type === 'blended') {
+                        historyByTimestamp[time][reading.tank_type] = reading;
+                    }
+                });
+
+                // Keep the charts module clean and just push points in chronological order
+                Object.keys(historyByTimestamp).forEach(time => {
+                    Charts.addDataPoint(historyByTimestamp[time]);
+                    // overwrite the auto-generated time label in charts with the historical one
+                    const lastIdx = Charts.tdsData.labels.length - 1;
+                    Charts.tdsData.labels[lastIdx] = time;
+                    Charts.levelData.labels[lastIdx] = time;
+                    Charts.tempData.labels[lastIdx] = time;
+                });
+                Charts.updateCharts();
+
+                console.log(`Loaded ${Object.keys(historyByTimestamp).length} historical data points into charts`);
+            }
+        } catch (e) {
+            console.warn('Failed to load historical chart data:', e);
         }
     },
 
