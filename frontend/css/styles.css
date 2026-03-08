@@ -533,6 +533,29 @@ body::after {
     border-color: var(--accent-red);
 }
 
+.data-source-badge {
+    padding: 4px 10px;
+    border-radius: var(--radius-md);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    border: 1px solid var(--border-color);
+    margin-left: 4px;
+}
+
+.data-source-badge.db {
+    background: rgba(34, 197, 94, 0.15);
+    color: var(--accent-green);
+    border-color: var(--accent-green);
+    animation: pulseGlow 2s infinite;
+}
+
+.data-source-badge.simulation {
+    background: rgba(251, 191, 36, 0.1);
+    color: var(--accent-yellow);
+    border-color: var(--accent-yellow);
+}
+
 /* Tank Visualization - Premium */
 .tank-visualization {
     display: flex;

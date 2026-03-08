@@ -137,45 +137,82 @@ const Dashboard = {
         }
     },
 
+    // Track data source
+    dataSource: 'simulation', // 'db' or 'simulation'
+
     // Main update loop
     async update() {
         try {
-            // Get simulation data (local fallback or from /api/simulation/step)
-            const data = await API.getSimulationData();
-            if (!data?.tanks) return;
+            let tanks = null;
+            let blendRatio = this.blendRatio;
+            const isLoggedIn = window.EdgeAPI && EdgeAPI.userId && !EdgeAPI.userId.startsWith('demo');
 
-            this.updateTanks(data.tanks);
-            this.updateCharts(data.tanks);
+            // 1. Try DB first (real Wokwi data) when logged in
+            if (isLoggedIn) {
+                try {
+                    const dbData = await EdgeAPI.getLatestReadings();
+                    if (dbData?.success && dbData.readings?.blended?.tds) {
+                        tanks = dbData.readings; // ro_reject, rainwater, blended from DB
+                        this._setDataSource('db');
+                    }
+                } catch (e) {
+                    console.warn('DB read failed, falling back to simulation:', e.message);
+                }
+            }
+
+            // 2. Fall back to local simulation if no DB data
+            if (!tanks) {
+                const simData = await API.getSimulationData();
+                if (!simData?.tanks) return;
+                tanks = simData.tanks;
+                blendRatio = simData.blendRatio || blendRatio;
+                this._setDataSource('simulation');
+            }
+
+            this.updateTanks(tanks);
+            this.updateCharts(tanks);
             this.updateLastUpdate();
             this.updateStatus('Running');
 
-            // Push to sensor-ingest — returns prediction + alerts + gamification in one shot
-            if (window.EdgeAPI && EdgeAPI.userId && !EdgeAPI.userId.startsWith('demo')) {
+            // 3. Push to sensor-ingest (fan-out: ml-predict + alert-check + gamification)
+            if (isLoggedIn) {
                 try {
-                    const result = await EdgeAPI.ingestSensorData(data.tanks, data.blendRatio);
+                    const result = await EdgeAPI.ingestSensorData(tanks, blendRatio);
                     if (result?.success) {
                         if (result.prediction) this.displayPredictions(result);
                         if (result.alert) this._showAlerts(result.alert);
                         if (result.points?.newAchievements?.length) {
                             result.points.newAchievements.forEach(a =>
-                                Toast.show(`${a.icon || '🏆'} Achievement unlocked: ${a.name} (+${a.points} pts)!`, 'success', 5000)
+                                Toast.show(`${a.icon || '🏆'} Achievement: ${a.name} (+${a.points} pts)!`, 'success', 5000)
                             );
                         }
                     }
                 } catch (e) {
-                    // Edge ingest failed — fall back to local prediction only
-                    console.warn('sensor-ingest failed, using local prediction:', e.message);
-                    this.updatePredictions(data.tanks, data.blendRatio);
+                    console.warn('sensor-ingest failed, local prediction fallback:', e.message);
+                    this.updatePredictions(tanks, blendRatio);
                 }
             } else {
-                // Not logged in — use local prediction fallback
-                this.updatePredictions(data.tanks, data.blendRatio);
+                this.updatePredictions(tanks, blendRatio);
             }
 
-            this.updateStats(data.tanks);
+            this.updateStats(tanks);
         } catch (error) {
             console.error('Dashboard update error:', error);
             this.updateStatus('Error');
+        }
+    },
+
+    // Update the data source badge in the UI
+    _setDataSource(source) {
+        if (this.dataSource === source) return;
+        this.dataSource = source;
+        const badge = document.getElementById('data-source-badge');
+        if (badge) {
+            badge.textContent = source === 'db' ? '🟢 Live (Wokwi)' : '🟡 Simulation';
+            badge.className = 'data-source-badge ' + source;
+        }
+        if (source === 'db') {
+            Toast.show('🟢 Switched to live sensor data from Wokwi!', 'success', 3000);
         }
     },
 
