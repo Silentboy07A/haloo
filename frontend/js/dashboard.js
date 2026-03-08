@@ -23,54 +23,14 @@ const Dashboard = {
     // Initialize dashboard
     init() {
         this.setupEventListeners();
-        this.loadPreTrainedModel();
+        // Model health now reported by ml-predict edge function response
+        const badge = document.getElementById('model-health');
+        const stats = document.getElementById('model-stats');
+        if (badge) badge.textContent = 'Edge-Powered';
+        if (stats) stats.textContent = 'LinearReg + Polynomial + Kalman + WMA + ARIMA';
         this.start();
     },
 
-    // Load pre-trained model from build process
-    async loadPreTrainedModel() {
-        const badge = document.getElementById('model-health');
-        const stats = document.getElementById('model-stats');
-
-        try {
-            if (badge) badge.textContent = 'Loading...';
-
-            const response = await fetch('data/trained-model.json');
-            if (!response.ok) {
-                if (response.status === 404) {
-                    console.warn('⚠️ Trained model not found. This is expected if the first build is still running.');
-                }
-                throw new Error(`Model fetch failed: ${response.status}`);
-            }
-
-            const data = await response.json();
-
-            if (data.forest) {
-                const globalForest = RandomRainForest.fromJSON(data.forest);
-                console.log('🌲 Global model loaded. Trained at:', data.trainedAt);
-                this.updateModelStatus(data);
-            }
-        } catch (err) {
-            console.error('❌ Model load error:', err);
-            if (badge) {
-                badge.textContent = 'Real-time';
-                badge.classList.remove('optimal');
-            }
-            if (stats) {
-                stats.textContent = 'Syncing from local sensor stream...';
-            }
-        }
-    },
-
-    updateModelStatus(data) {
-        const badge = document.getElementById('model-health');
-        const stats = document.getElementById('model-stats');
-        if (badge && stats) {
-            badge.textContent = 'Pre-trained ✓';
-            badge.classList.add('optimal');
-            stats.textContent = `RMSE: ${data.metrics.rmse.toFixed(4)} | n=${data.metrics.samples}`;
-        }
-    },
 
     // Setup event listeners
     setupEventListeners() {
@@ -312,61 +272,90 @@ const Dashboard = {
         }
     },
 
-    // Display prediction results
+    // Display prediction results (handles both edge function and local fallback format)
     displayPredictions(prediction) {
-        // Predicted TDS
+        // Support both edge function wrapper and local fallback
+        const p = prediction.prediction || prediction;
+
+        // Predicted TDS (short-term, 60s)
         const predictedTds = document.getElementById('predicted-tds');
         if (predictedTds) {
-            const value = prediction.predictions?.futureTDS ||
-                prediction.predictedTDS ||
-                '--';
+            const value = p.predictedTDS ?? p.predictions?.futureTDS ?? '--';
             predictedTds.textContent = typeof value === 'number' ? `${value.toFixed(1)} ppm` : value;
         }
 
         // TDS Trend
         const tdsTrend = document.getElementById('tds-trend');
         if (tdsTrend) {
-            const trend = prediction.predictions?.tdsTrend || prediction.tdsTrend || 'stable';
-            tdsTrend.textContent = trend.charAt(0).toUpperCase() + trend.slice(1);
-            tdsTrend.className = 'prediction-trend ' +
-                (trend === 'increasing' ? 'up' : trend === 'decreasing' ? 'down' : 'stable');
+            const trend = p.tdsTrend ?? p.predictions?.tdsTrend ?? 'stable';
+            const icons = { increasing: '📈', decreasing: '📉', stable: '➡️' };
+            tdsTrend.textContent = `${icons[trend] || ''} ${trend.charAt(0).toUpperCase() + trend.slice(1)}`;
+            tdsTrend.className = 'prediction-trend ' + trend;
         }
 
         // Time to target
         const timeToTarget = document.getElementById('time-to-target');
         if (timeToTarget) {
-            const time = prediction.timing?.timeToOptimalTDS || prediction.timeToTarget;
-            if (time && time.formatted) {
-                timeToTarget.textContent = time.formatted;
-            } else if (typeof time === 'number') {
-                timeToTarget.textContent = this.formatTime(time);
+            const ttt = p.timeToTarget ?? p.timing?.timeToOptimalTDS;
+            if (typeof ttt === 'number') {
+                timeToTarget.textContent = this.formatTime(ttt);
+            } else if (ttt?.formatted) {
+                timeToTarget.textContent = ttt.formatted;
             } else {
-                timeToTarget.textContent = 'N/A';
+                timeToTarget.textContent = 'Stable';
             }
         }
 
-        // Time to full
-        const timeToFull = document.getElementById('time-to-full');
-        if (timeToFull) {
-            const time = prediction.timing?.timeToTankFull || prediction.timeToFill;
-            if (time && time.formatted) {
-                timeToFull.textContent = time.formatted;
-            } else if (typeof time === 'number') {
-                timeToFull.textContent = this.formatTime(time);
-            } else {
-                timeToFull.textContent = 'N/A';
-            }
-        }
-
-        // Optimal blend
+        // Optimal blend ratio — shows useCase as tooltip
         const optimalBlend = document.getElementById('optimal-blend');
         if (optimalBlend) {
-            const ratio = prediction.recommendations?.optimalBlendRatio ||
-                prediction.optimalBlendRatio;
+            const ratio = p.optimalBlendRatio ?? p.recommendations?.optimalBlendRatio;
+            const useCase = p.useCase ? p.useCase.replace('_', ' ') : '';
             if (ratio) {
-                optimalBlend.textContent = `${Math.round(ratio.ro * 100)}% / ${Math.round(ratio.rain * 100)}%`;
+                optimalBlend.textContent = `RO ${Math.round(ratio.ro * 100)}% / Rain ${Math.round(ratio.rain * 100)}%`;
+                if (useCase) optimalBlend.title = `Best for: ${useCase}`;
             }
         }
+
+        // Model health
+        const modelHealth = document.getElementById('model-health');
+        const modelStats = document.getElementById('model-stats');
+        if (p.modelHealth) {
+            const { datapointsUsed, modelReady, r2Linear, r2Polynomial } = p.modelHealth;
+            if (modelHealth) {
+                modelHealth.textContent = modelReady
+                    ? `${Math.round((p.confidence || 0) * 100)}% confidence`
+                    : `Learning (${datapointsUsed}/5 pts)`;
+                modelHealth.classList.toggle('optimal', !!modelReady);
+            }
+            if (modelStats) {
+                modelStats.textContent = modelReady
+                    ? `R² lin: ${r2Linear} | poly: ${r2Polynomial} | n=${datapointsUsed}`
+                    : 'Waiting for more sensor data...';
+            }
+        }
+
+        // Anomaly / TDS status badge on blended tank
+        const badge = document.getElementById('tds-status');
+        if (badge && p.anomaly) {
+            badge.classList.remove('optimal', 'warning', 'danger');
+            if (p.isOptimal) {
+                badge.textContent = `${(p.useCase || 'Optimal').replace('_', ' ')} ✓`;
+                badge.classList.add('optimal');
+            } else if (p.anomaly.severity === 'severe') {
+                badge.textContent = '⚠️ Exceeds Limit';
+                badge.classList.add('danger');
+            } else if (p.anomaly.severity === 'mild') {
+                badge.textContent = '⚠️ Anomaly';
+                badge.classList.add('warning');
+            } else {
+                badge.textContent = (p.useCase || 'Monitoring').replace('_', ' ');
+                badge.classList.add('warning');
+            }
+        }
+
+        // Store last prediction for 'Use Optimal' button
+        this.lastPrediction = p;
     },
 
     // Update statistics

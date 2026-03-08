@@ -7,7 +7,7 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
     process.env.SUPABASE_URL || '',
-    process.env.SUPABASE_SERVICE_KEY || ''
+    process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 );
 
 // Credit packages
@@ -24,7 +24,7 @@ const FEATURES = [
     { id: 'export_data', name: 'Data Export', price: 150, description: 'Export all your data' }
 ];
 
-export default async function handler(req, res) {
+export async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');

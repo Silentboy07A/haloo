@@ -1,155 +1,157 @@
 // ============================================
 // SAVEHYDROO - Authentication Module
-// Handles user authentication with Supabase
+// Real Supabase Auth (Google OAuth + Email)
 // ============================================
 
+// SUPABASE_URL and SUPABASE_ANON_KEY are declared in edge-api.js (loaded first)
+
 const Auth = {
-    // Current user state
     user: null,
     profile: null,
     isAuthenticated: false,
-
-    // Demo mode (for testing without Supabase)
-    demoMode: true,
-
-    // Supabase client placeholder
     supabase: null,
 
-    // Initialize auth
-    init() {
-        // Check for stored session
-        const storedUser = localStorage.getItem('savehydroo_user');
-        if (storedUser) {
-            try {
-                this.user = JSON.parse(storedUser);
-                this.isAuthenticated = true;
-                this.loadProfile();
-            } catch (e) {
-                localStorage.removeItem('savehydroo_user');
+    // ── Initialise ────────────────────────────
+    async init() {
+        // Boot Supabase client (loaded from CDN in index.html)
+        this.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+            auth: {
+                autoRefreshToken: true,
+                persistSession: true,
+                detectSessionInUrl: true   // picks up OAuth redirect automatically
             }
+        });
+
+        // Handle OAuth redirect — Supabase puts tokens in the URL hash
+        const { data: { session } } = await this.supabase.auth.getSession();
+        if (session) {
+            await this._onSignedIn(session.user);
         }
+
+        // Listen for auth state changes (login, logout, token refresh)
+        this.supabase.auth.onAuthStateChange(async (_event, session) => {
+            if (session) {
+                await this._onSignedIn(session.user);
+            } else {
+                this._onSignedOut();
+            }
+        });
 
         this.setupEventListeners();
         this.updateUI();
     },
 
-    // Setup event listeners
+    // Called whenever a user is authenticated
+    async _onSignedIn(user) {
+        this.user = user;
+        this.isAuthenticated = true;
+
+        // Sync user ID into EdgeAPI so all edge function calls use the real UUID
+        if (window.EdgeAPI) {
+            EdgeAPI.setUserId(user.id);
+            const session = (await this.supabase.auth.getSession()).data.session;
+            if (session?.access_token) EdgeAPI.setAuthToken(session.access_token);
+        }
+
+        // Upsert profile row (safe to call on every login)
+        await this._ensureProfile(user);
+        await this.loadProfile();
+        this.closeModal();
+        this.updateUI();
+    },
+
+    _onSignedOut() {
+        this.user = null;
+        this.profile = null;
+        this.isAuthenticated = false;
+        if (window.EdgeAPI) EdgeAPI.logout();
+        this.updateUI();
+    },
+
+    // Create profile row if it doesn't exist yet
+    async _ensureProfile(user) {
+        const username =
+            user.user_metadata?.full_name ||
+            user.user_metadata?.name ||
+            user.email?.split('@')[0] ||
+            `user_${user.id.slice(0, 8)}`;
+
+        const avatar_url =
+            user.user_metadata?.avatar_url ||
+            user.user_metadata?.picture ||
+            null;
+
+        const { error } = await this.supabase
+            .from('profiles')
+            .upsert(
+                { id: user.id, username, avatar_url },
+                { onConflict: 'id', ignoreDuplicates: true }
+            );
+
+        if (error) console.warn('Profile upsert warning:', error.message);
+    },
+
+    // Load profile stats from Supabase
+    async loadProfile() {
+        if (!this.user) return;
+        const { data, error } = await this.supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', this.user.id)
+            .single();
+
+        if (!error && data) {
+            this.profile = data;
+            this.updateUI();
+        }
+    },
+
+    // ── Event Listeners ───────────────────────
     setupEventListeners() {
         const authBtn = document.getElementById('auth-btn');
-        const authModal = document.getElementById('auth-modal');
         const modalClose = document.getElementById('modal-close');
+        const authModal = document.getElementById('auth-modal');
         const authForm = document.getElementById('auth-form');
-        const authToggleLink = document.getElementById('auth-toggle-link');
+        const authToggle = document.getElementById('auth-toggle-link');
         const googleBtn = document.getElementById('google-login');
-        const githubBtn = document.getElementById('github-login');
+        const forgotLink = document.querySelector('.forgot-link');
 
-        if (authBtn) {
-            authBtn.addEventListener('click', () => this.toggleModal());
-        }
-
-        if (modalClose) {
-            modalClose.addEventListener('click', () => this.closeModal());
-        }
-
-        if (authModal) {
-            authModal.addEventListener('click', (e) => {
-                if (e.target === authModal) this.closeModal();
-            });
-        }
-
-        if (authForm) {
-            authForm.addEventListener('submit', (e) => this.handleSubmit(e));
-        }
-
-        if (authToggleLink) {
-            authToggleLink.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.toggleAuthMode();
-            });
-        }
-
-        // OAuth button listeners
-        if (googleBtn) {
-            googleBtn.addEventListener('click', () => this.loginWithOAuth('google'));
-        }
-
-        if (githubBtn) {
-            githubBtn.addEventListener('click', () => this.loginWithOAuth('github'));
-        }
+        authBtn?.addEventListener('click', () => this.isAuthenticated ? this.logout() : this.openModal());
+        modalClose?.addEventListener('click', () => this.closeModal());
+        authModal?.addEventListener('click', (e) => { if (e.target === authModal) this.closeModal(); });
+        authForm?.addEventListener('submit', (e) => this.handleSubmit(e));
+        authToggle?.addEventListener('click', (e) => { e.preventDefault(); this.toggleAuthMode(); });
+        googleBtn?.addEventListener('click', () => this.loginWithGoogle());
+        forgotLink?.addEventListener('click', (e) => { e.preventDefault(); this.forgotPassword(); });
     },
 
-    // OAuth login
-    async loginWithOAuth(provider) {
+    // ── Google OAuth ──────────────────────────
+    async loginWithGoogle() {
         try {
-            if (this.demoMode) {
-                // Demo OAuth - simulate OAuth login
-                Toast.show(`Connecting to ${provider}...`, 'info');
+            this._setLoading(true, 'google-login', 'Connecting...');
 
-                // Simulate OAuth delay
-                await new Promise(resolve => setTimeout(resolve, 1000));
-
-                const providerName = provider.charAt(0).toUpperCase() + provider.slice(1);
-                const randomId = Math.random().toString(36).substring(7);
-
-                this.user = {
-                    id: `${provider}-${Date.now()}`,
-                    email: `user_${randomId}@${provider}.com`,
-                    username: `${providerName}User_${randomId}`,
-                    provider: provider,
-                    avatar_url: null
-                };
-
-                this.profile = {
-                    id: this.user.id,
-                    username: this.user.username,
-                    points: 50, // Bonus points for OAuth signup!
-                    level: 1,
-                    streak_days: 1,
-                    wallet_balance: 150 // Extra credits for OAuth users
-                };
-
-                localStorage.setItem('savehydroo_user', JSON.stringify(this.user));
-                localStorage.setItem('savehydroo_profile', JSON.stringify(this.profile));
-
-                this.isAuthenticated = true;
-                this.closeModal();
-                this.updateUI();
-
-                Toast.show(`Welcome! Signed in with ${providerName} (+50 bonus pts!)`, 'success');
-                return;
-            }
-
-            // Real Supabase OAuth
-            // Requires Supabase project with OAuth providers configured
-            if (this.supabase) {
-                Toast.show(`Redirecting to ${provider}...`, 'info');
-
-                const { data, error } = await this.supabase.auth.signInWithOAuth({
-                    provider: provider,
-                    options: {
-                        redirectTo: window.location.origin + '/auth/callback'
+            const { error } = await this.supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: window.location.origin,
+                    queryParams: {
+                        access_type: 'offline',
+                        prompt: 'select_account',  // always show account picker
                     }
-                });
-
-                if (error) {
-                    throw error;
                 }
+            });
 
-                // OAuth will redirect, so no further action needed here
-            } else {
-                Toast.show('OAuth not configured. Using demo mode.', 'warning');
-                // Fall back to demo mode
-                this.demoMode = true;
-                await this.loginWithOAuth(provider);
-            }
+            if (error) throw error;
+            // Browser will redirect to Google — no further action needed
 
-        } catch (error) {
-            console.error('OAuth error:', error);
-            Toast.show(`${provider} login failed: ${error.message}`, 'error');
+        } catch (err) {
+            console.error('Google OAuth error:', err);
+            Toast.show('Google sign-in failed: ' + err.message, 'error');
+            this._setLoading(false, 'google-login', 'Continue with Google');
         }
     },
 
-    // State: login or signup
+    // ── Email Auth ────────────────────────────
     authMode: 'login',
 
     toggleAuthMode() {
@@ -157,60 +159,11 @@ const Auth = {
         this.updateModalUI();
     },
 
-    updateModalUI() {
-        const title = document.getElementById('auth-title');
-        const subtitle = document.getElementById('auth-subtitle');
-        const submit = document.getElementById('auth-submit');
-        const toggleText = document.getElementById('auth-toggle-text');
-        const toggleLink = document.getElementById('auth-toggle-link');
-        const usernameGroup = document.getElementById('username-group');
-
-        if (this.authMode === 'signup') {
-            title.textContent = 'Create Account';
-            subtitle.textContent = 'Join SaveHydroo and start saving water';
-            submit.textContent = 'Create Account';
-            toggleText.textContent = 'Already have an account?';
-            toggleLink.textContent = 'Sign in';
-            usernameGroup.style.display = 'block';
-        } else {
-            title.textContent = 'Welcome Back';
-            subtitle.textContent = 'Sign in to continue to SaveHydroo';
-            submit.textContent = 'Sign In';
-            toggleText.textContent = "Don't have an account?";
-            toggleLink.textContent = 'Create one';
-            usernameGroup.style.display = 'none';
-        }
-    },
-
-    toggleModal() {
-        if (this.isAuthenticated) {
-            this.logout();
-        } else {
-            this.openModal();
-        }
-    },
-
-    openModal() {
-        const modal = document.getElementById('auth-modal');
-        if (modal) {
-            modal.classList.add('active');
-            this.updateModalUI();
-        }
-    },
-
-    closeModal() {
-        const modal = document.getElementById('auth-modal');
-        if (modal) {
-            modal.classList.remove('active');
-        }
-    },
-
     async handleSubmit(e) {
         e.preventDefault();
-
-        const email = document.getElementById('email').value;
+        const email = document.getElementById('email').value.trim();
         const password = document.getElementById('password').value;
-        const username = document.getElementById('username')?.value;
+        const username = document.getElementById('username')?.value.trim();
 
         if (this.authMode === 'signup') {
             await this.signup(email, password, username);
@@ -221,170 +174,143 @@ const Auth = {
 
     async signup(email, password, username) {
         try {
-            if (this.demoMode) {
-                // Demo signup
-                this.user = {
-                    id: 'demo-' + Date.now(),
-                    email,
-                    username: username || email.split('@')[0]
-                };
-                this.profile = {
-                    id: this.user.id,
-                    username: this.user.username,
-                    points: 0,
-                    level: 1,
-                    streak_days: 0,
-                    wallet_balance: 100 // Start with some demo credits
-                };
+            this._setLoading(true, 'auth-submit', 'Creating account...');
 
-                localStorage.setItem('savehydroo_user', JSON.stringify(this.user));
-                localStorage.setItem('savehydroo_profile', JSON.stringify(this.profile));
+            const { data, error } = await this.supabase.auth.signUp({
+                email,
+                password,
+                options: { data: { username } }
+            });
 
-                this.isAuthenticated = true;
+            if (error) throw error;
+
+            if (data.user && !data.session) {
+                Toast.show('Check your email to confirm your account!', 'info');
                 this.closeModal();
-                this.updateUI();
-
-                Toast.show('Account created! Welcome to SaveHydroo!', 'success');
-                return;
+            } else {
+                Toast.show('Account created! Welcome to SaveHydroo 💧', 'success');
             }
-
-            // Real Supabase signup would go here
-            // const { data, error } = await this.supabase.auth.signUp({ email, password });
-
-        } catch (error) {
-            Toast.show('Signup failed: ' + error.message, 'error');
+        } catch (err) {
+            Toast.show('Signup failed: ' + err.message, 'error');
+        } finally {
+            this._setLoading(false, 'auth-submit', 'Create Account');
         }
     },
 
     async login(email, password) {
         try {
-            if (this.demoMode) {
-                // Demo login
-                this.user = {
-                    id: 'demo-' + Date.now(),
-                    email,
-                    username: email.split('@')[0]
-                };
+            this._setLoading(true, 'auth-submit', 'Signing in...');
 
-                // Load or create profile
-                const storedProfile = localStorage.getItem('savehydroo_profile');
-                if (storedProfile) {
-                    this.profile = JSON.parse(storedProfile);
-                } else {
-                    this.profile = {
-                        id: this.user.id,
-                        username: this.user.username,
-                        points: 0,
-                        level: 1,
-                        streak_days: 0,
-                        wallet_balance: 100
-                    };
-                }
+            const { error } = await this.supabase.auth.signInWithPassword({ email, password });
+            if (error) throw error;
 
-                localStorage.setItem('savehydroo_user', JSON.stringify(this.user));
-
-                this.isAuthenticated = true;
-                this.closeModal();
-                this.updateUI();
-
-                Toast.show('Welcome back!', 'success');
-                return;
-            }
-
-            // Real Supabase login would go here
-            // const { data, error } = await this.supabase.auth.signInWithPassword({ email, password });
-
-        } catch (error) {
-            Toast.show('Login failed: ' + error.message, 'error');
+            Toast.show('Welcome back! 👋', 'success');
+        } catch (err) {
+            Toast.show('Login failed: ' + err.message, 'error');
+        } finally {
+            this._setLoading(false, 'auth-submit', 'Sign In');
         }
     },
 
-    logout() {
-        this.user = null;
-        this.profile = null;
-        this.isAuthenticated = false;
-
-        localStorage.removeItem('savehydroo_user');
-
-        this.updateUI();
-        Toast.show('Logged out successfully', 'info');
-    },
-
-    async loadProfile() {
-        if (this.demoMode) {
-            const stored = localStorage.getItem('savehydroo_profile');
-            if (stored) {
-                this.profile = JSON.parse(stored);
-            }
+    async forgotPassword() {
+        const email = document.getElementById('email').value.trim();
+        if (!email) {
+            Toast.show('Enter your email address first', 'warning');
             return;
         }
-
-        // Load from API
-        // const result = await API.getStats(this.user.id);
-        // this.profile = result.stats;
-    },
-
-    async updateProfile(updates) {
-        if (!this.profile) return;
-
-        Object.assign(this.profile, updates);
-
-        if (this.demoMode) {
-            localStorage.setItem('savehydroo_profile', JSON.stringify(this.profile));
+        const { error } = await this.supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: window.location.origin
+        });
+        if (error) {
+            Toast.show('Reset email failed: ' + error.message, 'error');
+        } else {
+            Toast.show('Password reset email sent!', 'success');
         }
-
-        this.updateUI();
     },
 
+    async logout() {
+        const { error } = await this.supabase.auth.signOut();
+        if (error) {
+            Toast.show('Logout failed: ' + error.message, 'error');
+        } else {
+            Toast.show('Logged out successfully', 'info');
+        }
+    },
+
+    // ── Modal ─────────────────────────────────
+    openModal() {
+        document.getElementById('auth-modal')?.classList.add('active');
+        this.updateModalUI();
+    },
+
+    closeModal() {
+        document.getElementById('auth-modal')?.classList.remove('active');
+    },
+
+    updateModalUI() {
+        const isSignup = this.authMode === 'signup';
+        const t = document.getElementById('auth-title');
+        const s = document.getElementById('auth-subtitle');
+        const sb = document.getElementById('auth-submit');
+        const tt = document.getElementById('auth-toggle-text');
+        const tl = document.getElementById('auth-toggle-link');
+        const ug = document.getElementById('username-group');
+
+        if (t) t.textContent = isSignup ? 'Create Account' : 'Welcome Back';
+        if (s) s.textContent = isSignup ? 'Join SaveHydroo and start saving water' : 'Sign in to continue to SaveHydroo';
+        if (sb) sb.querySelector('.btn-text').textContent = isSignup ? 'Create Account' : 'Sign In';
+        if (tt) tt.textContent = isSignup ? 'Already have an account?' : "Don't have an account?";
+        if (tl) tl.textContent = isSignup ? 'Sign in' : 'Create one';
+        if (ug) ug.style.display = isSignup ? 'block' : 'none';
+    },
+
+    // ── UI ────────────────────────────────────
     updateUI() {
         const authBtn = document.getElementById('auth-btn');
-        const userPoints = document.getElementById('user-points');
-        const userLevel = document.getElementById('user-level');
-        const userAvatar = document.getElementById('user-avatar');
+        const userPts = document.getElementById('user-points');
+        const userLvl = document.getElementById('user-level');
+        const userAvtr = document.getElementById('user-avatar');
 
         if (this.isAuthenticated) {
-            if (authBtn) {
-                authBtn.textContent = 'Logout';
-            }
+            if (authBtn) authBtn.textContent = 'Logout';
 
             if (this.profile) {
-                if (userPoints) {
-                    userPoints.textContent = `${this.profile.points || 0} pts`;
-                }
-                if (userLevel) {
-                    userLevel.textContent = `Lvl ${this.profile.level || 1}`;
-                }
+                if (userPts) userPts.textContent = `${this.profile.points || 0} pts`;
+                if (userLvl) userLvl.textContent = `Lvl ${this.profile.level || 1}`;
             }
 
-            if (userAvatar) {
-                userAvatar.innerHTML = `<span>${this.user?.username?.charAt(0).toUpperCase() || '👤'}</span>`;
+            if (userAvtr) {
+                const pic = this.user?.user_metadata?.avatar_url || this.user?.user_metadata?.picture;
+                if (pic) {
+                    userAvtr.innerHTML = `<img src="${pic}" alt="avatar" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+                } else {
+                    const initial = (this.profile?.username || this.user?.email || 'U').charAt(0).toUpperCase();
+                    userAvtr.innerHTML = `<span>${initial}</span>`;
+                }
             }
         } else {
-            if (authBtn) {
-                authBtn.textContent = 'Login';
-            }
-            if (userPoints) {
-                userPoints.textContent = '0 pts';
-            }
-            if (userLevel) {
-                userLevel.textContent = 'Lvl 1';
-            }
-            if (userAvatar) {
-                userAvatar.innerHTML = '<span>👤</span>';
-            }
+            if (authBtn) authBtn.textContent = 'Login';
+            if (userPts) userPts.textContent = '0 pts';
+            if (userLvl) userLvl.textContent = 'Lvl 1';
+            if (userAvtr) userAvtr.innerHTML = '<span>👤</span>';
         }
     },
 
-    // Get current user ID
+    // ── Helpers ───────────────────────────────
     getUserId() {
         return this.user?.id || 'anonymous';
+    },
+
+    _setLoading(loading, btnId, label) {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+        btn.disabled = loading;
+        const textEl = btn.querySelector('span') || btn;
+        textEl.textContent = label;
     }
 };
 
-// Initialize on load
-document.addEventListener('DOMContentLoaded', () => {
-    Auth.init();
-});
+// Kick off after DOM + Supabase CDN are ready
+document.addEventListener('DOMContentLoaded', () => Auth.init());
 
-// Export
 window.Auth = Auth;

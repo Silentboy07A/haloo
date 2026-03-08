@@ -158,6 +158,27 @@ CREATE INDEX IF NOT EXISTS idx_daily_stats_user ON daily_stats(user_id);
 CREATE INDEX IF NOT EXISTS idx_daily_stats_date ON daily_stats(date DESC);
 
 -- ============================================
+-- ALERTS TABLE
+-- Water quality and level alert records
+-- ============================================
+CREATE TABLE IF NOT EXISTS alerts (
+  id BIGSERIAL PRIMARY KEY,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  tank_type TEXT NOT NULL,
+  alert_type TEXT NOT NULL,
+  message TEXT NOT NULL,
+  value NUMERIC,
+  threshold NUMERIC,
+  resolved BOOLEAN DEFAULT false NOT NULL,
+  resolved_at TIMESTAMPTZ,
+  timestamp TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_alerts_user ON alerts(user_id);
+CREATE INDEX IF NOT EXISTS idx_alerts_resolved ON alerts(resolved);
+CREATE INDEX IF NOT EXISTS idx_alerts_timestamp ON alerts(timestamp DESC);
+
+-- ============================================
 -- VIEWS
 -- ============================================
 
@@ -206,6 +227,7 @@ ALTER TABLE user_achievements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_features ENABLE ROW LEVEL SECURITY;
 ALTER TABLE daily_stats ENABLE ROW LEVEL SECURITY;
+ALTER TABLE alerts ENABLE ROW LEVEL SECURITY;
 
 -- Profiles policies
 CREATE POLICY "Users can view own profile" ON profiles
@@ -267,6 +289,16 @@ CREATE POLICY "Users can insert own stats" ON daily_stats
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "Users can update own stats" ON daily_stats
+  FOR UPDATE USING (auth.uid() = user_id);
+
+-- Alerts policies
+CREATE POLICY "Users can view own alerts" ON alerts
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Service role can insert alerts" ON alerts
+  FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Users can resolve own alerts" ON alerts
   FOR UPDATE USING (auth.uid() = user_id);
 
 -- ============================================

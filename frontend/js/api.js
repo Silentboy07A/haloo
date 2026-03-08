@@ -109,13 +109,15 @@ const API = {
     // ============================================
 
     async calculatePrediction(userId, readings, blendRatio) {
-        // Try API first
-        const apiResult = await this.request('/api/predictions/calculate', {
-            method: 'POST',
-            body: JSON.stringify({ userId, readings, blendRatio })
-        });
-
-        if (apiResult?.success) return apiResult.prediction;
+        // Try the ml-predict edge function first (ensemble model)
+        if (window.EdgeAPI) {
+            try {
+                const edgeResult = await EdgeAPI.predict({ userId, readings });
+                if (edgeResult?.success) return edgeResult;
+            } catch (e) {
+                console.warn('Edge ml-predict failed, falling back to local:', e.message);
+            }
+        }
 
         // Fallback to local predictor
         if (this.predictor && readings) {
@@ -124,7 +126,6 @@ const API = {
                 tankReadings[type] = data;
                 this.predictor.addReading(type, data);
             }
-
             return this.predictor.getPredictionReport(tankReadings, blendRatio);
         }
 
@@ -256,8 +257,8 @@ const API = {
     }
 };
 
-// Initialize API
-API.init();
+// Initialize API after DOM is ready so WaterSimulation & WaterPredictor exist
+document.addEventListener('DOMContentLoaded', () => API.init());
 
 // Export for use
 window.API = API;

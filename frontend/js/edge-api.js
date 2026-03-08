@@ -131,14 +131,14 @@ const EdgeAPI = {
 
     // Get available packages
     async getPaymentPackages() {
-        return await this.request('payment-simulation?action=packages', {
+        return await this.request('payment?action=packages', {
             method: 'GET'
         });
     },
 
     // Initiate payment
     async initiatePayment(type, packageId = null, featureId = null, amount = 0, description = '') {
-        return await this.request('payment-simulation', {
+        return await this.request('payment', {
             method: 'POST',
             body: JSON.stringify({
                 userId: this.userId,
@@ -153,8 +153,42 @@ const EdgeAPI = {
 
     // Get transaction history
     async getTransactionHistory() {
-        return await this.request(`payment-simulation?userId=${this.userId}`, {
+        return await this.request(`payment?userId=${this.userId}`, {
             method: 'GET'
+        });
+    },
+
+    // ============================================
+    // ALERT CHECK ENDPOINTS
+    // ============================================
+
+    // Fetch alerts for the current user (unresolved by default)
+    async getAlerts(unresolvedOnly = true) {
+        return await this.request(
+            `alert-check?userId=${this.userId}&unresolvedOnly=${unresolvedOnly}`,
+            { method: 'GET' }
+        );
+    },
+
+    // Evaluate current sensor readings and create alerts if thresholds breached
+    async checkAlerts(readings) {
+        return await this.request('alert-check', {
+            method: 'POST',
+            body: JSON.stringify({
+                userId: this.userId,
+                readings
+            })
+        });
+    },
+
+    // Mark a specific alert as resolved
+    async resolveAlert(alertId) {
+        return await this.request('alert-check', {
+            method: 'PATCH',
+            body: JSON.stringify({
+                alertId,
+                userId: this.userId
+            })
         });
     },
 

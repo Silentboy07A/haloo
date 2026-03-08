@@ -7,7 +7,7 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
     process.env.SUPABASE_URL || '',
-    process.env.SUPABASE_SERVICE_KEY || ''
+    process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 );
 
 // Points configuration
@@ -29,7 +29,7 @@ const LEVELS = [
     { level: 5, name: 'Aqua Legend', minPoints: 5001 }
 ];
 
-export default async function handler(req, res) {
+export async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');

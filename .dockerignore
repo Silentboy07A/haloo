@@ -1,0 +1,17 @@
+node_modules
+.env
+.env.*
+.git
+.gitignore
+.vercel
+.github
+simulation/*.ino
+simulation/wokwi.toml
+simulation/diagram.json
+simulation/libraries.txt
+simulation/INTERACTIVE_CONTROLS.md
+simulation/custom-chips
+test
+*.md
+README*.md
+SUPABASE_CONFIG.md
