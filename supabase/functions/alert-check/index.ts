@@ -1,8 +1,3 @@
-// ============================================
-// SAVEHYDROO - Alert Check Edge Function
-// Water quality alert detection and management
-// ============================================
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 
@@ -11,123 +6,139 @@ const corsHeaders = {
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Alert thresholds
+// ─────────────────────────────────────────────
+//  ALERT THRESHOLDS
+// ─────────────────────────────────────────────
 const THRESHOLDS = {
     tds: {
-        low: 50,    // ppm — below this is suspiciously pure (possible sensor fault)
-        high: 500,  // ppm — above this is unsafe for drinking
-        optimal_min: 150,
-        optimal_max: 300,
-    },
-    water_level: {
-        critical: 10,   // % — critically low
-        warning: 25,    // % — getting low
+        high: 500,   // ppm — above this = too dirty for car washing
+        critical: 1000,  // ppm — above this = unsuitable for any non-potable use
     },
     temperature: {
-        high: 45,   // °C — too hot
-        low: 5,     // °C — too cold
+        high: 35,        // °C — above this = abnormal
+        low: 10,        // °C — below this = abnormal
+    },
+    level: {
+        low: 20,    // cm — below this = tank low
+        critical: 10,    // cm — below this = tank nearly empty
+    },
+    pressure: {
+        high: 5.0,   // bar — above this = pump stress
+        critical: 7.0,   // bar — above this = pipe burst risk
+        low: 0.5,   // bar — below this = pump failure
+    },
+    turbidity: {
+        high: 200,   // NTU — above this = too dirty for car washing
+        critical: 500,   // NTU — above this = unsuitable
+    },
+    leak: {
+        threshold: 1.5,  // L/min difference between flow_in and flow_out
     },
 };
 
-interface SensorReadings {
-    ro_reject?: { tds: number; temperature: number; level: number; flowRate: number };
-    rainwater?: { tds: number; temperature: number; level: number; flowRate: number };
-    blended?: { tds: number; temperature: number; level: number; flowRate: number };
-}
-
-interface AlertCheckPayload {
-    userId: string;
-    readings: SensorReadings;
-}
-
-// Evaluate readings and return list of alerts to create
-function evaluateAlerts(userId: string, readings: SensorReadings): any[] {
+// ─────────────────────────────────────────────
+//  ALERT BUILDER
+// ─────────────────────────────────────────────
+function checkTank(tank: string, r: any): any[] {
     const alerts: any[] = [];
-    const now = new Date().toISOString();
+    if (!r) return alerts;
 
-    for (const [tankType, reading] of Object.entries(readings)) {
-        if (!reading) continue;
+    // TDS alerts
+    if (r.tds >= THRESHOLDS.tds.critical) {
+        alerts.push({
+            tank, type: "tds_critical", severity: "critical",
+            message: `🚨 ${tank}: TDS ${r.tds} ppm — water unsuitable for any use`,
+            value: r.tds, threshold: THRESHOLDS.tds.critical,
+        });
+    } else if (r.tds >= THRESHOLDS.tds.high) {
+        alerts.push({
+            tank, type: "tds_high", severity: "warning",
+            message: `⚠️ ${tank}: TDS ${r.tds} ppm — exceeds car washing limit`,
+            value: r.tds, threshold: THRESHOLDS.tds.high,
+        });
+    }
 
-        // TDS out of range
-        if (reading.tds > THRESHOLDS.tds.high) {
-            alerts.push({
-                user_id: userId,
-                tank_type: tankType,
-                alert_type: "tds_high",
-                message: `TDS in ${tankType.replace("_", " ")} tank is critically high (${reading.tds.toFixed(0)} ppm). Reduce RO reject ratio immediately.`,
-                value: reading.tds,
-                threshold: THRESHOLDS.tds.high,
-                resolved: false,
-                timestamp: now,
-            });
-        } else if (reading.tds < THRESHOLDS.tds.low && tankType === "blended") {
-            alerts.push({
-                user_id: userId,
-                tank_type: tankType,
-                alert_type: "tds_low",
-                message: `Blended TDS is unusually low (${reading.tds.toFixed(0)} ppm). Check sensor or increase RO ratio.`,
-                value: reading.tds,
-                threshold: THRESHOLDS.tds.low,
-                resolved: false,
-                timestamp: now,
-            });
-        }
+    // Temperature alerts
+    if (r.temperature >= THRESHOLDS.temperature.high) {
+        alerts.push({
+            tank, type: "temp_high", severity: "warning",
+            message: `⚠️ ${tank}: Temperature ${r.temperature}°C — abnormally high`,
+            value: r.temperature, threshold: THRESHOLDS.temperature.high,
+        });
+    } else if (r.temperature <= THRESHOLDS.temperature.low) {
+        alerts.push({
+            tank, type: "temp_low", severity: "warning",
+            message: `⚠️ ${tank}: Temperature ${r.temperature}°C — abnormally low`,
+            value: r.temperature, threshold: THRESHOLDS.temperature.low,
+        });
+    }
 
-        // Blended TDS outside optimal range
-        if (
-            tankType === "blended" &&
-            reading.tds >= THRESHOLDS.tds.low &&
-            reading.tds <= THRESHOLDS.tds.high &&
-            (reading.tds < THRESHOLDS.tds.optimal_min || reading.tds > THRESHOLDS.tds.optimal_max)
-        ) {
+    // Level alerts
+    if (r.level !== null && r.level !== undefined) {
+        if (r.level <= THRESHOLDS.level.critical) {
             alerts.push({
-                user_id: userId,
-                tank_type: tankType,
-                alert_type: "tds_suboptimal",
-                message: `Blended TDS (${reading.tds.toFixed(0)} ppm) is outside the optimal range of ${THRESHOLDS.tds.optimal_min}–${THRESHOLDS.tds.optimal_max} ppm. Adjust blend ratio.`,
-                value: reading.tds,
-                threshold: THRESHOLDS.tds.optimal_max,
-                resolved: false,
-                timestamp: now,
+                tank, type: "level_critical", severity: "critical",
+                message: `🚨 ${tank}: Water level ${r.level} cm — tank nearly empty!`,
+                value: r.level, threshold: THRESHOLDS.level.critical,
             });
-        }
-
-        // Water level alerts
-        if (reading.level <= THRESHOLDS.water_level.critical) {
+        } else if (r.level <= THRESHOLDS.level.low) {
             alerts.push({
-                user_id: userId,
-                tank_type: tankType,
-                alert_type: "level_critical",
-                message: `${tankType.replace("_", " ")} tank level is critically low (${reading.level.toFixed(0)}%). Refill immediately.`,
-                value: reading.level,
-                threshold: THRESHOLDS.water_level.critical,
-                resolved: false,
-                timestamp: now,
-            });
-        } else if (reading.level <= THRESHOLDS.water_level.warning) {
-            alerts.push({
-                user_id: userId,
-                tank_type: tankType,
-                alert_type: "level_low",
-                message: `${tankType.replace("_", " ")} tank level is getting low (${reading.level.toFixed(0)}%).`,
-                value: reading.level,
-                threshold: THRESHOLDS.water_level.warning,
-                resolved: false,
-                timestamp: now,
+                tank, type: "level_low", severity: "warning",
+                message: `⚠️ ${tank}: Water level ${r.level} cm — tank running low`,
+                value: r.level, threshold: THRESHOLDS.level.low,
             });
         }
+    }
 
-        // Temperature alerts
-        if (reading.temperature > THRESHOLDS.temperature.high) {
+    // Pressure alerts
+    if (r.pressure !== null && r.pressure !== undefined) {
+        if (r.pressure >= THRESHOLDS.pressure.critical) {
             alerts.push({
-                user_id: userId,
-                tank_type: tankType,
-                alert_type: "temp_high",
-                message: `${tankType.replace("_", " ")} tank temperature is too high (${reading.temperature.toFixed(1)}°C). Risk of bacterial growth.`,
-                value: reading.temperature,
-                threshold: THRESHOLDS.temperature.high,
-                resolved: false,
-                timestamp: now,
+                tank, type: "pressure_critical", severity: "critical",
+                message: `🚨 ${tank}: Pressure ${r.pressure} bar — pipe burst risk!`,
+                value: r.pressure, threshold: THRESHOLDS.pressure.critical,
+            });
+        } else if (r.pressure >= THRESHOLDS.pressure.high) {
+            alerts.push({
+                tank, type: "pressure_high", severity: "warning",
+                message: `⚠️ ${tank}: Pressure ${r.pressure} bar — pump under stress`,
+                value: r.pressure, threshold: THRESHOLDS.pressure.high,
+            });
+        } else if (r.pressure <= THRESHOLDS.pressure.low) {
+            alerts.push({
+                tank, type: "pressure_low", severity: "critical",
+                message: `🚨 ${tank}: Pressure ${r.pressure} bar — possible pump failure`,
+                value: r.pressure, threshold: THRESHOLDS.pressure.low,
+            });
+        }
+    }
+
+    // Turbidity alerts
+    if (r.turbidity !== null && r.turbidity !== undefined) {
+        if (r.turbidity >= THRESHOLDS.turbidity.critical) {
+            alerts.push({
+                tank, type: "turbidity_critical", severity: "critical",
+                message: `🚨 ${tank}: Turbidity ${r.turbidity} NTU — water unsuitable`,
+                value: r.turbidity, threshold: THRESHOLDS.turbidity.critical,
+            });
+        } else if (r.turbidity >= THRESHOLDS.turbidity.high) {
+            alerts.push({
+                tank, type: "turbidity_high", severity: "warning",
+                message: `⚠️ ${tank}: Turbidity ${r.turbidity} NTU — water too dirty for car washing`,
+                value: r.turbidity, threshold: THRESHOLDS.turbidity.high,
+            });
+        }
+    }
+
+    // Leak detection
+    if (r.flow_in !== null && r.flow_in !== undefined &&
+        r.flow_out !== null && r.flow_out !== undefined) {
+        const diff = r.flow_in - r.flow_out;
+        if (diff > THRESHOLDS.leak.threshold) {
+            alerts.push({
+                tank, type: "leak_detected", severity: "critical",
+                message: `🚨 ${tank}: Leak detected! Flow in ${r.flow_in} L/min vs out ${r.flow_out} L/min (diff: ${diff.toFixed(2)} L/min)`,
+                value: diff, threshold: THRESHOLDS.leak.threshold,
             });
         }
     }
@@ -135,135 +146,64 @@ function evaluateAlerts(userId: string, readings: SensorReadings): any[] {
     return alerts;
 }
 
+// ─────────────────────────────────────────────
+//  SERVE
+// ─────────────────────────────────────────────
 serve(async (req) => {
-    if (req.method === "OPTIONS") {
-        return new Response("ok", { headers: corsHeaders });
-    }
-
+    if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
     try {
-        const supabaseClient = createClient(
+        const supabase = createClient(
             Deno.env.get("SUPABASE_URL") ?? "",
             Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
         );
 
-        // ─── GET: Fetch alerts for a user ────────────────────────────
-        if (req.method === "GET") {
-            const url = new URL(req.url);
-            const userId = url.searchParams.get("userId");
-            const unresolvedOnly = url.searchParams.get("unresolvedOnly") !== "false";
+        const { userId, readings } = await req.json();
 
-            if (!userId) {
-                return new Response(
-                    JSON.stringify({ error: "userId is required" }),
-                    { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-                );
-            }
-
-            let query = supabaseClient
-                .from("alerts")
-                .select("*")
-                .eq("user_id", userId)
-                .order("timestamp", { ascending: false })
-                .limit(50);
-
-            if (unresolvedOnly) {
-                query = query.eq("resolved", false);
-            }
-
-            const { data: alerts, error } = await query;
-
-            if (error) {
-                throw new Error(`Failed to fetch alerts: ${error.message}`);
-            }
-
-            return new Response(
-                JSON.stringify({ success: true, alerts: alerts || [], count: alerts?.length || 0 }),
-                { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-            );
-        }
-
-        // ─── POST: Evaluate sensor readings and create alerts ─────────
-        if (req.method === "POST") {
-            const payload: AlertCheckPayload = await req.json();
-
-            if (!payload.userId || !payload.readings) {
-                return new Response(
-                    JSON.stringify({ error: "userId and readings are required" }),
-                    { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-                );
-            }
-
-            const newAlerts = evaluateAlerts(payload.userId, payload.readings);
-
-            if (newAlerts.length === 0) {
-                return new Response(
-                    JSON.stringify({ success: true, alertsCreated: 0, alerts: [] }),
-                    { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-                );
-            }
-
-            // Insert new alerts
-            const { data: inserted, error: insertError } = await supabaseClient
-                .from("alerts")
-                .insert(newAlerts)
-                .select();
-
-            if (insertError) {
-                throw new Error(`Failed to create alerts: ${insertError.message}`);
-            }
-
-            return new Response(
-                JSON.stringify({
-                    success: true,
-                    alertsCreated: inserted?.length || 0,
-                    alerts: inserted || [],
-                }),
-                { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-            );
-        }
-
-        // ─── PATCH: Resolve an alert ──────────────────────────────────
-        if (req.method === "PATCH") {
-            const { alertId, userId } = await req.json();
-
-            if (!alertId || !userId) {
-                return new Response(
-                    JSON.stringify({ error: "alertId and userId are required" }),
-                    { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-                );
-            }
-
-            const { data, error } = await supabaseClient
-                .from("alerts")
-                .update({ resolved: true, resolved_at: new Date().toISOString() })
-                .eq("id", alertId)
-                .eq("user_id", userId) // safety: users can only resolve their own alerts
-                .select()
-                .single();
-
-            if (error || !data) {
-                return new Response(
-                    JSON.stringify({ error: "Alert not found or already resolved" }),
-                    { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-                );
-            }
-
-            return new Response(
-                JSON.stringify({ success: true, alert: data }),
-                { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-            );
-        }
-
-        return new Response(
-            JSON.stringify({ error: "Method not allowed" }),
-            { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        if (!readings) return new Response(
+            JSON.stringify({ error: "readings required" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
 
-    } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
-        console.error("Error in alert-check function:", error);
+        // Check all tanks
+        const allAlerts = [
+            ...checkTank("ro_reject", readings?.ro_reject),
+            ...checkTank("rainwater", readings?.rainwater),
+            ...checkTank("blended", readings?.blended),
+        ];
+
+        // Save alerts to DB if userId present and alerts exist
+        if (userId && allAlerts.length > 0) {
+            for (const alert of allAlerts) {
+                await supabase.from("alerts").insert({
+                    user_id: userId,
+                    tank_type: alert.tank,
+                    type: alert.type,
+                    severity: alert.severity,
+                    message: alert.message,
+                    value: alert.value,
+                    threshold: alert.threshold,
+                    created_at: new Date().toISOString(),
+                });
+            }
+        }
+
+        const criticalAlerts = allAlerts.filter(a => a.severity === "critical");
+        const warningAlerts = allAlerts.filter(a => a.severity === "warning");
+
+        return new Response(JSON.stringify({
+            success: true,
+            alerts: allAlerts.length > 0 ? allAlerts : null,
+            summary: {
+                total: allAlerts.length,
+                critical: criticalAlerts.length,
+                warnings: warningAlerts.length,
+                hasLeak: allAlerts.some(a => a.type === "leak_detected"),
+            },
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+    } catch (error) {
         return new Response(
-            JSON.stringify({ error: "Internal server error", message: error.message }),
+            JSON.stringify({ error: "Internal server error", message: (error as Error).message }),
             { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
     }

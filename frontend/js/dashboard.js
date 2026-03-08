@@ -140,20 +140,56 @@ const Dashboard = {
     // Main update loop
     async update() {
         try {
-            // Get simulation data
+            // Get simulation data (local fallback or from /api/simulation/step)
             const data = await API.getSimulationData();
+            if (!data?.tanks) return;
 
-            if (data && data.tanks) {
-                this.updateTanks(data.tanks);
-                this.updateCharts(data.tanks);
+            this.updateTanks(data.tanks);
+            this.updateCharts(data.tanks);
+            this.updateLastUpdate();
+            this.updateStatus('Running');
+
+            // Push to sensor-ingest — returns prediction + alerts + gamification in one shot
+            if (window.EdgeAPI && EdgeAPI.userId && !EdgeAPI.userId.startsWith('demo')) {
+                try {
+                    const result = await EdgeAPI.ingestSensorData(data.tanks, data.blendRatio);
+                    if (result?.success) {
+                        if (result.prediction) this.displayPredictions(result);
+                        if (result.alert) this._showAlerts(result.alert);
+                        if (result.points?.newAchievements?.length) {
+                            result.points.newAchievements.forEach(a =>
+                                Toast.show(`${a.icon || '🏆'} Achievement unlocked: ${a.name} (+${a.points} pts)!`, 'success', 5000)
+                            );
+                        }
+                    }
+                } catch (e) {
+                    // Edge ingest failed — fall back to local prediction only
+                    console.warn('sensor-ingest failed, using local prediction:', e.message);
+                    this.updatePredictions(data.tanks, data.blendRatio);
+                }
+            } else {
+                // Not logged in — use local prediction fallback
                 this.updatePredictions(data.tanks, data.blendRatio);
-                this.updateStats(data.tanks);
-                this.updateLastUpdate();
-                this.updateStatus('Running');
             }
+
+            this.updateStats(data.tanks);
         } catch (error) {
             console.error('Dashboard update error:', error);
             this.updateStatus('Error');
+        }
+    },
+
+    // Show active alerts as toasts (deduplicated, max 1 per type per cycle)
+    _shownAlertTypes: new Set(),
+    _showAlerts(alerts) {
+        if (!alerts?.length) return;
+        for (const a of alerts) {
+            if (this._shownAlertTypes.has(a.type)) continue;
+            this._shownAlertTypes.add(a.type);
+            const type = a.severity === 'critical' ? 'error' : 'warning';
+            Toast.show(a.message, type, 6000);
+            // Clear after 30s so same alert can reappear
+            setTimeout(() => this._shownAlertTypes.delete(a.type), 30000);
         }
     },
 

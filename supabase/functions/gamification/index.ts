@@ -1,275 +1,71 @@
-// ============================================
-// SAVEHYDROO - Gamification Edge Function
-// Server-side points, levels, achievements
-// ============================================
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 
-const corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
-// Level thresholds
-const LEVELS = [
-    { level: 1, name: "Water Beginner", minPoints: 0 },
-    { level: 2, name: "H2O Apprentice", minPoints: 100 },
-    { level: 3, name: "Aqua Expert", minPoints: 500 },
-    { level: 4, name: "Hydro Master", minPoints: 1500 },
-    { level: 5, name: "Aqua Legend", minPoints: 5000 },
-];
-
-interface PointsRequest {
-    userId: string;
-    action: "rainwater_usage" | "ro_reduction" | "optimal_tds" | "daily_login" | "manual";
-    amount?: number;
-    metadata?: {
-        rainwaterLiters?: number;
-        roReductionPercent?: number;
-        optimalTdsHours?: number;
-    };
-}
-
-// Calculate points based on action
-function calculatePoints(action: string, metadata?: any): number {
-    switch (action) {
-        case "rainwater_usage":
-            // +10 points per 10L of rainwater used
-            return Math.floor((metadata?.rainwaterLiters || 0) / 10) * 10;
-
-        case "ro_reduction":
-            // +15 points per 5% reduction in RO reject usage
-            return Math.floor((metadata?.roReductionPercent || 0) / 5) * 15;
-
-        case "optimal_tds":
-            // +20 points per hour of optimal TDS maintenance
-            return (metadata?.optimalTdsHours || 0) * 20;
-
-        case "daily_login":
-            // Handled separately with streak multiplier
-            return 0;
-
-        default:
-            return 0;
-    }
-}
-
-// Determine user level based on points
-function getUserLevel(points: number) {
-    for (let i = LEVELS.length - 1; i >= 0; i--) {
-        if (points >= LEVELS[i].minPoints) {
-            return LEVELS[i];
-        }
-    }
-    return LEVELS[0];
-}
-
-// Check and award achievements
-async function checkAchievements(supabase: any, userId: string, profile: any) {
-    const { data: allAchievements } = await supabase
-        .from("achievements")
-        .select("*");
-
-    const { data: earnedAchievements } = await supabase
-        .from("user_achievements")
-        .select("achievement_id")
-        .eq("user_id", userId);
-
-    const earnedIds = new Set(earnedAchievements?.map((a: any) => a.achievement_id) || []);
-    const newAchievements = [];
-
-    for (const achievement of allAchievements || []) {
-        if (earnedIds.has(achievement.id)) continue;
-
-        let earned = false;
-
-        switch (achievement.requirement_type) {
-            case "rainwater_used":
-                earned = profile.total_rainwater_used >= achievement.requirement_value;
-                break;
-            case "water_saved":
-                earned = profile.total_water_saved >= achievement.requirement_value;
-                break;
-            case "streak_days":
-                earned = profile.streak_days >= achievement.requirement_value;
-                break;
-            case "points":
-                earned = profile.points >= achievement.requirement_value;
-                break;
-            case "days_active":
-                // Calculate days since profile creation
-                const createdDate = new Date(profile.created_at);
-                const daysSinceCreation = Math.floor((Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
-                earned = daysSinceCreation >= achievement.requirement_value;
-                break;
-        }
-
-        if (earned) {
-            newAchievements.push(achievement);
-            await supabase
-                .from("user_achievements")
-                .insert({ user_id: userId, achievement_id: achievement.id });
-        }
-    }
-
-    return newAchievements;
-}
+const corsHeaders = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
+const TARGET_TDS = 225, TDS_TOLERANCE = 25;
 
 serve(async (req) => {
-    if (req.method === "OPTIONS") {
-        return new Response("ok", { headers: corsHeaders });
-    }
-
+    if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
     try {
-        const supabaseClient = createClient(
-            Deno.env.get("SUPABASE_URL") ?? "",
-            Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+        const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
+        const { userId, readings } = await req.json();
+        if (!userId) return new Response(JSON.stringify({ success: true, result: null }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        const blendedTDS = readings?.blended?.tds ?? 0;
+        const isOptimal = Math.abs(blendedTDS - TARGET_TDS) <= TDS_TOLERANCE;
+        const { data: stats } = await supabase.from("user_stats").select("*").eq("user_id", userId).single();
+        if (!stats) return new Response(JSON.stringify({ success: false, error: "User not found" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        let pointsEarned = 1;
+        if (isOptimal) pointsEarned += 2;
+        const today = new Date().toISOString().split("T")[0];
+        const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+        let newStreak = stats.streak_days;
+        if (stats.last_streak_date === today) { /* already counted */ }
+        else if (stats.last_streak_date === yesterday) newStreak += 1;
+        else newStreak = 1;
+        const newTotal = stats.total_points + pointsEarned;
+        const newReadings = stats.total_readings + 1;
+        const newOptimal = isOptimal ? stats.optimal_hours + (5 / 3600) : stats.optimal_hours;
+        await supabase.from("user_stats").update({
+            total_points: newTotal,
+            total_readings: newReadings,
+            streak_days: newStreak,
+            longest_streak: Math.max(stats.longest_streak, newStreak),
+            optimal_hours: newOptimal,
+            last_reading_at: new Date().toISOString(),
+            last_streak_date: today,
+            updated_at: new Date().toISOString(),
+        }).eq("user_id", userId);
+        const week = `${new Date().getFullYear()}-W${String(Math.ceil(new Date().getDate() / 7)).padStart(2, "0")}`;
+        await supabase.from("leaderboard").upsert(
+            { user_id: userId, week, points: newTotal, updated_at: new Date().toISOString() },
+            { onConflict: "user_id,week" }
         );
-
-        // GET: Fetch user stats and leaderboard
-        if (req.method === "GET") {
-            const url = new URL(req.url);
-            const userId = url.searchParams.get("userId");
-            const action = url.searchParams.get("action");
-
-            // Get leaderboard
-            if (action === "leaderboard") {
-                const { data: leaderboard } = await supabaseClient
-                    .from("leaderboard")
-                    .select("*")
-                    .limit(100);
-
-                return new Response(
-                    JSON.stringify({ success: true, leaderboard }),
-                    { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-                );
+        const { data: allAch } = await supabase.from("achievements").select("*");
+        const { data: earned } = await supabase.from("user_achievements").select("achievement_id").eq("user_id", userId);
+        const earnedIds = new Set((earned ?? []).map((e: any) => e.achievement_id));
+        const newlyEarned: any[] = [];
+        for (const ach of (allAch ?? [])) {
+            if (earnedIds.has(ach.id)) continue;
+            let e = false;
+            if (ach.condition === "total_readings >= 1" && newReadings >= 1) e = true;
+            if (ach.condition === "total_readings >= 100" && newReadings >= 100) e = true;
+            if (ach.condition === "total_readings >= 1000" && newReadings >= 1000) e = true;
+            if (ach.condition === "optimal_hours >= 1" && newOptimal >= 1) e = true;
+            if (ach.condition === "optimal_hours >= 24" && newOptimal >= 24) e = true;
+            if (ach.condition === "streak_days >= 7" && newStreak >= 7) e = true;
+            if (ach.condition === "streak_days >= 30" && newStreak >= 30) e = true;
+            if (e) {
+                await supabase.from("user_achievements").insert({ user_id: userId, achievement_id: ach.id, points_awarded: ach.points_value });
+                newlyEarned.push({ name: ach.name, icon: ach.icon, points: ach.points_value });
             }
-
-            // Get user stats
-            if (!userId) {
-                return new Response(
-                    JSON.stringify({ error: "userId is required" }),
-                    { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-                );
-            }
-
-            const { data: profile } = await supabaseClient
-                .from("profiles")
-                .select("*")
-                .eq("id", userId)
-                .single();
-
-            if (!profile) {
-                return new Response(
-                    JSON.stringify({ error: "User not found" }),
-                    { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-                );
-            }
-
-            const { data: achievements } = await supabaseClient
-                .from("user_achievements")
-                .select("achievement_id, achievements(*)")
-                .eq("user_id", userId);
-
-            const level = getUserLevel(profile.points);
-
-            const stats = {
-                points: profile.points,
-                level: level.level,
-                levelName: level.name,
-                nextLevel: LEVELS[level.level] || null,
-                pointsToNextLevel: LEVELS[level.level] ? LEVELS[level.level].minPoints - profile.points : 0,
-                streak: profile.streak_days,
-                walletBalance: parseFloat(profile.wallet_balance),
-                totalWaterSaved: parseFloat(profile.total_water_saved),
-                totalRainwaterUsed: parseFloat(profile.total_rainwater_used),
-                achievements: achievements?.map((a: any) => a.achievements) || [],
-                achievementCount: achievements?.length || 0,
-            };
-
-            return new Response(
-                JSON.stringify({ success: true, stats }),
-                { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-            );
         }
-
-        // POST: Award points
-        if (req.method === "POST") {
-            const payload: PointsRequest = await req.json();
-
-            if (!payload.userId || !payload.action) {
-                return new Response(
-                    JSON.stringify({ error: "userId and action are required" }),
-                    { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-                );
-            }
-
-            // Get current profile
-            const { data: profile } = await supabaseClient
-                .from("profiles")
-                .select("*")
-                .eq("id", payload.userId)
-                .single();
-
-            if (!profile) {
-                return new Response(
-                    JSON.stringify({ error: "User not found" }),
-                    { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-                );
-            }
-
-            // Calculate points
-            let pointsEarned = payload.amount || calculatePoints(payload.action, payload.metadata);
-
-            // Handle daily login with streak multiplier
-            if (payload.action === "daily_login") {
-                pointsEarned = 5 * Math.max(1, profile.streak_days);
-            }
-
-            // Update profile
-            const newPoints = profile.points + pointsEarned;
-            const newLevel = getUserLevel(newPoints);
-
-            const updates: any = {
-                points: newPoints,
-                level: newLevel.level,
-            };
-
-            // Update water metrics if provided
-            if (payload.metadata?.rainwaterLiters) {
-                updates.total_rainwater_used = profile.total_rainwater_used + payload.metadata.rainwaterLiters;
-            }
-
-            await supabaseClient
-                .from("profiles")
-                .update(updates)
-                .eq("id", payload.userId);
-
-            // Check for new achievements
-            const updatedProfile = { ...profile, ...updates };
-            const newAchievements = await checkAchievements(supabaseClient, payload.userId, updatedProfile);
-
-            return new Response(
-                JSON.stringify({
-                    success: true,
-                    pointsEarned,
-                    totalPoints: newPoints,
-                    level: newLevel,
-                    newAchievements,
-                }),
-                { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-            );
-        }
-
-        return new Response(
-            JSON.stringify({ error: "Method not allowed" }),
-            { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify({
+            success: true,
+            result: { pointsEarned, totalPoints: newTotal, streak: newStreak, isOptimal, newAchievements: newlyEarned },
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     } catch (error) {
-        console.error("Error in gamification function:", error);
         return new Response(
-            JSON.stringify({ error: "Internal server error", message: error.message }),
+            JSON.stringify({ error: "Internal server error", message: (error as Error).message }),
             { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
     }
