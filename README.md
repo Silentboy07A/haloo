@@ -63,9 +63,7 @@ savehydroo/
 └── README.md
 ```
 
-## 🚀 Quick Start
-
-### Local Development
+## 🚀 Local Development
 
 ```bash
 # Install dependencies
@@ -78,33 +76,32 @@ npm run dev
 http://localhost:3000
 ```
 
-### Run Simulation
+## ☁️ Azure Cloud Deployment (CI/CD)
 
-```bash
-# Run sensor simulation (CLI mode)
-npm run simulate
+The application is configured to automatically build and deploy to **Azure Container Apps** every time you push to the `main` branch via GitHub Actions.
 
-# Run deterministic test
-npm run simulate:test
-```
+### Deployment Prerequisites
 
-## ⚙️ Configuration
+To enable automatic deployments, you must configure the following **7 Secrets** in your GitHub Repository under **Settings → Secrets and variables → Actions**:
 
-### Environment Variables
+**Azure Secrets:**
+1. `REGISTRY_LOGIN_SERVER`: Example: `yourregistry.azurecr.io`
+2. `REGISTRY_USERNAME`: Your Azure Container Registry username
+3. `REGISTRY_PASSWORD`: Your Azure Container Registry password
+4. `AZURE_CREDENTIALS`: The full JSON output from your Azure Service Principal creation
 
-Create a `.env` file:
+**Supabase Secrets:**
+5. `SUPABASE_URL`: Your Supabase Project URL
+6. `SUPABASE_ANON_KEY`: Your Supabase public anon key
+7. `SUPABASE_SERVICE_ROLE_KEY`: Your Supabase private service role key (required for Edge Functions)
 
-```env
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_KEY=your-service-key
-```
+Once these secrets are active, simply push your code to the `main` branch or manually trigger the `SaveHydroo CI/CD → Azure Container Apps` workflow in the **Actions** tab.
 
-### Supabase Setup
+## ⚙️ Supabase Setup
 
 1. Create a new Supabase project
-2. Run `supabase/schema.sql` in the SQL Editor
-3. Update environment variables
+2. Run `supabase/schema.sql` in the SQL Editor to generate the tables
+3. Deploy the Edge Functions: `supabase functions deploy ml-predict`
 
 ## 📊 API Endpoints
 
