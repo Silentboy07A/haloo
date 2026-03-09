@@ -19,25 +19,25 @@ graph TD
 
     %% Nodes
     subgraph Client ["Client Layer"]
-        UI[Frontend Dashboard]:::frontend
-        SimFallback[Browser Simulation Fallback]:::frontend
+        UI["Frontend Dashboard"]:::frontend
+        SimFallback["Browser Simulation Fallback"]:::frontend
     end
     
     subgraph Supabase ["Supabase Ecosystem"]
-        DB[(PostgreSQL Database)]:::db
-        Auth[Supabase Auth]:::external
+        DB[("PostgreSQL Database")]:::db
+        Auth["Supabase Auth"]:::external
         
         subgraph Edge_Functions ["Edge Functions (Deno)"]
-            Ingest[sensor-ingest]:::edge
-            ML[ml-predict]:::edge
-            Game[gamification]:::edge
-            Alert[alert-check]:::edge
-            Payment[payment-simulation]:::edge
+            Ingest["sensor-ingest"]:::edge
+            ML["ml-predict"]:::edge
+            Game["gamification"]:::edge
+            Alert["alert-check"]:::edge
+            Payment["payment-simulation"]:::edge
         end
     end
     
     subgraph Hardware ["Hardware Layer"]
-        Wokwi[Wokwi IoT Simulator (ESP32)]:::iot
+        Wokwi["Wokwi IoT Simulator (ESP32)"]:::iot
     end
     
     %% Flows
