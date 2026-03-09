@@ -43,9 +43,13 @@ graph TD
     %% Flows
     Wokwi -- "Live Sensor Data" --> Ingest
     
-    UI -- "Fetches Data & Auth" --> DB
+    UI -- "Data sync, Auth & REST API" --> DB
     UI -- "Login/Logout" --> Auth
-    UI -- "Transactions" --> Payment
+    
+    %% API Interactions (Edge Functions)
+    UI -- "Predictions (EdgeAPI.predict)" --> ML
+    UI -- "Leaderboard (EdgeAPI)" --> Game
+    UI -- "Transactions (EdgeAPI)" --> Payment
     
     %% Ingest Fan-out
     Ingest -- "Trigger" --> ML
@@ -54,8 +58,8 @@ graph TD
     Ingest -- "Writes Data" --> DB
     
     %% Fallback Logic
-    SimFallback -- "Pushes Synthetic Data" -.-> Ingest
-    UI -. "Reads if Wokwi is offline" .-> SimFallback
+    SimFallback -- "Pushes Synthetic Data (EdgeAPI)" -.-> Ingest
+    UI -. "Reads Local Math Fallback" .-> SimFallback
     
     %% Styling
     style Client fill:transparent,stroke:#3b82f6,stroke-width:2px,stroke-dasharray: 5 5
