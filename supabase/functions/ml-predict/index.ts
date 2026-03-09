@@ -315,12 +315,23 @@ serve(async (req) => {
         const { name: useCase, targetTDS, tolerance, maxTDS } = profile;
 
         // Fetch blended TDS history (expanded for trained model features)
-        const { data: history } = await supabase
+        // We get the LATEST 100 records and then reverse them for chronological processing
+        let query = supabase
             .from("sensor_readings")
             .select("tds, timestamp, flow_rate, level")
-            .eq("tank_type", "blended")
-            .order("timestamp", { ascending: true })
+            .eq("tank_type", "blended");
+
+        if (userId && !userId.toString().startsWith('demo')) {
+            query = query.or(`user_id.eq.${userId},user_id.is.null`);
+        } else {
+            query = query.is("user_id", null);
+        }
+
+        const { data: historyData } = await query
+            .order("timestamp", { ascending: false })
             .limit(HISTORY_LIMIT);
+
+        const history = historyData ? [...historyData].reverse() : null;
 
         let pred = currentTDS, ltPred = currentTDS;
         let trend = "stable", conf = 0.3, rate = 0, r2l = 0, r2p = 0;

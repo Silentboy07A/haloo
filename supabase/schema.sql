@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS sensor_readings (
   tank_type TEXT NOT NULL CHECK (tank_type IN ('ro_reject', 'rainwater', 'blended')),
   tds DECIMAL(8, 2),
   temperature DECIMAL(5, 2),
-  water_level DECIMAL(5, 2),
+  level DECIMAL(5, 2), -- Renamed from water_level
   flow_rate DECIMAL(6, 3),
   timestamp TIMESTAMPTZ DEFAULT NOW()
 );
@@ -55,12 +55,25 @@ CREATE INDEX IF NOT EXISTS idx_readings_tank ON sensor_readings(tank_type);
 CREATE TABLE IF NOT EXISTS predictions (
   id SERIAL PRIMARY KEY,
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  current_tds DECIMAL(8, 2),
   predicted_tds DECIMAL(8, 2),
+  long_term_tds DECIMAL(8, 2),
+  tds_trend TEXT,
+  tds_change_rate DECIMAL(8, 4),
   time_to_target INTEGER, -- seconds
-  time_to_fill INTEGER, -- seconds
+  time_to_full INTEGER, -- seconds
   confidence DECIMAL(4, 3),
-  blend_ratio_ro DECIMAL(4, 3),
-  blend_ratio_rain DECIMAL(4, 3),
+  target_tds DECIMAL(8, 2),
+  blend_ro DECIMAL(4, 3),
+  blend_rain DECIMAL(4, 3),
+  blend_feasible BOOLEAN,
+  is_optimal BOOLEAN,
+  anomaly_detected BOOLEAN,
+  anomaly_zscore DECIMAL(6, 2),
+  anomaly_severity TEXT,
+  r2_linear DECIMAL(6, 4),
+  r2_polynomial DECIMAL(6, 4),
+  datapoints_used INTEGER,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

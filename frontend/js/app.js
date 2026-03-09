@@ -198,8 +198,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize modules
     initTabs();
     Charts.init();
-    // Dashboard.init() is now triggered by Auth._onSignedIn
-    Dashboard.setupEventListeners(); // We can set up listeners, but not start loop
+    API.init(); // Initialize simulation fallback
+    Dashboard.init(); // Initialize EventListeners and UI state
     Gamification.init();
     Payments.init();
 
