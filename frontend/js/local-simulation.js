@@ -28,7 +28,8 @@ const API = {
         if (!this.dbHistory && window.EdgeAPI && EdgeAPI.apiKey) {
             try {
                 // Fetch thousands of historical rows to play back as a "Live stream"
-                const url = `${EdgeAPI.baseUrl.replace('/functions/v1', '')}/rest/v1/sensor_readings?select=*&limit=3000&order=timestamp.desc`;
+                // Specifically targeting seeded data (user_id IS NULL)
+                const url = `${EdgeAPI.baseUrl.replace('/functions/v1', '')}/rest/v1/sensor_readings?select=*&limit=3000&order=timestamp.desc&user_id=is.null`;
                 const response = await fetch(url, {
                     method: 'GET',
                     headers: { 'Content-Type': 'application/json', 'apikey': EdgeAPI.apiKey }

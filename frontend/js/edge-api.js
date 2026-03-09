@@ -27,8 +27,15 @@ const EdgeAPI = {
         if (storedAuth) {
             this.authToken = storedAuth;
         }
-        // Set default user for demo
-        this.userId = this.userId || 'demo-user-' + Date.now();
+
+        // Persist userId so demo users don't get 0 values on refresh
+        const storedUid = localStorage.getItem('hydro_user_id');
+        if (storedUid) {
+            this.userId = storedUid;
+        } else {
+            this.userId = 'demo-user-' + Math.random().toString(36).substring(2, 9);
+            localStorage.setItem('hydro_user_id', this.userId);
+        }
     },
 
     // Generic fetch wrapper with auth

@@ -27,14 +27,28 @@ serve(async (req) => {
 
             const readings: Record<string, any> = {};
             for (const tank of ["ro_reject", "rainwater", "blended"]) {
-                const { data } = await supabase
+                // First try user-specific data
+                let { data } = await supabase
                     .from("sensor_readings")
                     .select("*")
                     .eq("user_id", userId)
                     .eq("tank_type", tank)
                     .order("timestamp", { ascending: false })
                     .limit(1)
-                    .single();
+                    .maybeSingle();
+
+                // If no user-specific data, fallback to global seeded data (null user_id)
+                if (!data) {
+                    const { data: globalData } = await supabase
+                        .from("sensor_readings")
+                        .select("*")
+                        .is("user_id", null)
+                        .eq("tank_type", tank)
+                        .order("timestamp", { ascending: false })
+                        .limit(1)
+                        .maybeSingle();
+                    data = globalData;
+                }
 
                 if (data) {
                     readings[tank] = {

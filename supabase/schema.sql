@@ -247,6 +247,9 @@ CREATE POLICY "Anyone can view leaderboard data" ON profiles
 CREATE POLICY "Users can view own readings" ON sensor_readings
   FOR SELECT USING (auth.uid() = user_id);
 
+CREATE POLICY "Anyone can view global readings" ON sensor_readings
+  FOR SELECT USING (user_id IS NULL);
+
 CREATE POLICY "Users can insert own readings" ON sensor_readings
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 

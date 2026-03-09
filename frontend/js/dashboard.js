@@ -171,7 +171,7 @@ const Dashboard = {
                     this.updatePredictions(tanks, this.blendRatio);
 
                     // Push the synthesized readings back to DB so history/ML works
-                    if (window.EdgeAPI && EdgeAPI.userId && !EdgeAPI.userId.startsWith('demo')) {
+                    if (window.EdgeAPI && EdgeAPI.userId) {
                         EdgeAPI.ingestSensorData(tanks, this.blendRatio).catch(e => console.warn("Sim ingest failed:", e.message));
                     }
                 } else {
