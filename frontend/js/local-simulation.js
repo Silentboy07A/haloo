@@ -27,34 +27,47 @@ const API = {
         // 1. Try to fetch and cache historical database data for replay-style simulation
         if (!this.dbHistory && window.EdgeAPI && EdgeAPI.apiKey) {
             try {
-                // Fetch thousands of historical rows to play back as a "Live stream"
-                // Specifically targeting seeded data (user_id IS NULL)
-                const url = `${EdgeAPI.baseUrl.replace('/functions/v1', '')}/rest/v1/sensor_readings?select=*&limit=3000&order=timestamp.desc&user_id=is.null`;
+                // Use AbortController for a 5s timeout to prevent hanging
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+                const url = `${EdgeAPI.baseUrl.replace('/functions/v1', '')}/rest/v1/sensor_readings?select=*&limit=1000&order=timestamp.desc&user_id=is.null`;
                 const response = await fetch(url, {
                     method: 'GET',
-                    headers: { 'Content-Type': 'application/json', 'apikey': EdgeAPI.apiKey }
+                    headers: { 'Content-Type': 'application/json', 'apikey': EdgeAPI.apiKey },
+                    signal: controller.signal
                 });
+
+                clearTimeout(timeoutId);
+
                 if (response.ok) {
                     const data = await response.json();
 
                     // Group rows by timestamp so we get all 3 tanks per step
                     const grouped = {};
                     data.forEach(r => {
-                        if (!grouped[r.timestamp]) grouped[r.timestamp] = {};
-                        grouped[r.timestamp][r.tank_type] = {
+                        const ts = r.timestamp;
+                        if (!grouped[ts]) grouped[ts] = {};
+                        grouped[ts][r.tank_type] = {
                             tds: parseFloat(r.tds || 0),
                             temperature: parseFloat(r.temperature || 0),
-                            level: parseFloat(r.level || r.water_level || 0),
-                            flowRate: parseFloat(r.flow_rate || r.flow_in || 0)
+                            level: parseFloat(r.level || 0),
+                            flowRate: parseFloat(r.flow_rate || 0)
                         };
                     });
 
-                    // Filter out steps that don't have complete data for all 3 tanks
-                    this.dbHistory = Object.values(grouped).filter(g => g.ro_reject && g.rainwater && g.blended);
-                    this.dbHistoryIndex = this.dbHistory.length - 1; // start from oldest to newest
+                    // Filter out steps that have at least one tank defined
+                    const filtered = Object.values(grouped).filter(g => g.ro_reject || g.rainwater || g.blended);
+
+                    if (filtered.length > 0) {
+                        // Sort by timestamp (already likely sorted, but to be sure)
+                        this.dbHistory = filtered;
+                        this.dbHistoryIndex = this.dbHistory.length - 1; // start from oldest
+                        console.log(`Initialized DB Replay with ${this.dbHistory.length} steps`);
+                    }
                 }
             } catch (e) {
-                console.warn('DB Replay fetch failed, using mathematical simulation instead', e);
+                console.warn('DB Replay fetch failed, using mathematical simulation instead', e.message);
             }
         }
 
@@ -62,10 +75,10 @@ const API = {
         if (this.dbHistory && this.dbHistory.length > 0) {
             const tanks = this.dbHistory[this.dbHistoryIndex];
 
-            // Loop backwards through array (which is sorted newest to oldest) so we play oldest to newest
+            // Move to next step (playing backwards through desc-sorted array = playing forward in time)
             this.dbHistoryIndex--;
             if (this.dbHistoryIndex < 0) {
-                this.dbHistoryIndex = this.dbHistory.length - 1; // loop back
+                this.dbHistoryIndex = this.dbHistory.length - 1; // loop back to oldest
             }
 
             return {
@@ -80,7 +93,11 @@ const API = {
         // 3. Absolute Fallback: Original purely mathematical JS simulation
         if (this.simulation) {
             const data = this.simulation.step();
-            return { success: true, ...data };
+            return {
+                success: true,
+                ...data,
+                timestamp: new Date().toISOString()
+            };
         }
 
         return { success: false };

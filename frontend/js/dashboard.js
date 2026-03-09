@@ -147,44 +147,61 @@ const Dashboard = {
     async update() {
         try {
             let tanks = null;
+            const isDemo = !window.EdgeAPI || !EdgeAPI.userId || EdgeAPI.userId.startsWith('demo');
 
-            // Read the latest data from DB to display
+            // 1. Try to read the latest data from DB (Wokwi Live)
+            // If logged in as a real user, we prefer their specific live stream.
+            // If demo, we check if there's any global "live" data.
             try {
-                const dbData = await EdgeAPI.getLatestReadings();
-                if (dbData?.success && dbData.readings?.blended?.tds) {
-                    tanks = dbData.readings;
-                    this._setDataSource('db');
+                // Use a short 2s timeout for live check
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 2000);
 
-                    // Trigger a local UI update for predictions based on the real DB values
-                    this.updatePredictions(tanks, this.blendRatio);
+                const dbData = await EdgeAPI.getLatestReadings(controller.signal);
+                clearTimeout(timeoutId);
+
+                if (dbData?.success && dbData.readings?.blended?.tds) {
+                    // Check if data is actually "fresh" (within last 30s)
+                    const latestTs = new Date(dbData.readings.blended.timestamp || 0).getTime();
+                    const now = Date.now();
+
+                    if (now - latestTs < 30000) {
+                        tanks = dbData.readings;
+                        this._setDataSource('db');
+                        this.updatePredictions(tanks, this.blendRatio);
+                    }
                 }
             } catch (e) {
-                console.warn('DB read failed:', e.message);
+                console.warn('DB live check failed or timed out:', e.message);
             }
 
+            // 2. Fallback to Simulation (which might be DB Replay)
             if (!tanks) {
-                // Fallback to local simulation if DB read returns no fresh data
                 const simData = await API.getSimulationData();
                 if (simData && simData.success) {
                     tanks = simData.tanks;
                     this._setDataSource('simulation');
+
+                    // Trigger predictions (EdgeAPI.predict handles the demo/real logic)
                     this.updatePredictions(tanks, this.blendRatio);
 
-                    // Push the synthesized readings back to DB so history/ML works
-                    if (window.EdgeAPI && EdgeAPI.userId) {
-                        EdgeAPI.ingestSensorData(tanks, this.blendRatio).catch(e => console.warn("Sim ingest failed:", e.message));
+                    // Push simulation data back to DB for demo users so history works
+                    if (isDemo && window.EdgeAPI) {
+                        EdgeAPI.ingestSensorData(tanks, this.blendRatio).catch(e => { });
                     }
-                } else {
-                    this.updateStatus('Waiting for Data...');
-                    return;
                 }
             }
 
-            this.updateTanks(tanks);
-            this.updateCharts(tanks);
-            this.updateLastUpdate();
-            this.updateStatus('Running');
-            this.updateStats(tanks);
+            // 3. Update UI if we have data
+            if (tanks) {
+                this.updateTanks(tanks);
+                this.updateCharts(tanks);
+                this.updateLastUpdate();
+                this.updateStats(tanks);
+                this.updateStatus('Running');
+            } else {
+                this.updateStatus('Waiting for Data...');
+            }
         } catch (error) {
             console.error('Dashboard update error:', error);
             this.updateStatus('Error');

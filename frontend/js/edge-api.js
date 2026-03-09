@@ -50,9 +50,12 @@ const EdgeAPI = {
             headers['Authorization'] = `Bearer ${this.authToken}`;
         }
 
+        const { signal, ...fetchOptions } = options;
+
         const response = await fetch(`${this.baseUrl}/${endpoint}`, {
-            ...options,
-            headers
+            ...fetchOptions,
+            headers,
+            signal: signal || null
         });
 
         if (!response.ok) {
@@ -80,9 +83,10 @@ const EdgeAPI = {
     },
 
     // Get latest sensor readings
-    async getLatestReadings() {
+    async getLatestReadings(signal = null) {
         return await this.request(`sensor-ingest/latest?userId=${this.userId}`, {
-            method: 'GET'
+            method: 'GET',
+            signal
         });
     },
 
@@ -115,12 +119,13 @@ const EdgeAPI = {
     // ============================================
 
     // Get ML prediction
-    async getPrediction(currentReadings, stepsAhead = 60) {
+    async predict(data) {
+        const { userId, readings, stepsAhead = 60 } = data;
         return await this.request('ml-predict', {
             method: 'POST',
             body: JSON.stringify({
-                userId: this.userId,
-                currentReadings,
+                userId: userId || this.userId,
+                readings,
                 stepsAhead
             })
         });
