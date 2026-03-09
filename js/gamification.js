@@ -21,15 +21,25 @@ const Gamification = {
     },
 
     async loadAchievements() {
-        const result = await API.getAchievements(Auth.getUserId());
-        this.achievements = result?.achievements || API.getMockAchievements();
-        this.renderAchievements();
+        if (!window.EdgeAPI) return;
+        try {
+            const result = await EdgeAPI.getStats(EdgeAPI.userId);
+            this.achievements = result?.achievements || [];
+            this.renderAchievements();
+        } catch (e) {
+            console.warn("EdgeAPI achievements failed", e);
+        }
     },
 
     async loadLeaderboard() {
-        const result = await API.getLeaderboard();
-        this.leaderboard = result?.leaderboard || API.getMockLeaderboard();
-        this.renderLeaderboard();
+        if (!window.EdgeAPI) return;
+        try {
+            const result = await EdgeAPI.getLeaderboard();
+            this.leaderboard = result?.leaderboard || [];
+            this.renderLeaderboard();
+        } catch (e) {
+            console.warn("EdgeAPI leaderboard failed", e);
+        }
     },
 
     renderAchievements() {
@@ -94,21 +104,19 @@ const Gamification = {
     },
 
     async awardPoints(action, data = {}) {
-        if (!Auth.isAuthenticated) return;
-        const pts = { rainwater_use: 10, ro_reduction: 15, optimal_tds: 20 }[action] || 5;
-        Auth.profile.points = (Auth.profile.points || 0) + pts;
-
-        for (let i = this.levels.length - 1; i >= 0; i--) {
-            if (Auth.profile.points >= this.levels[i].minPoints) {
-                Auth.profile.level = this.levels[i].level;
-                break;
+        if (!Auth.isAuthenticated || !window.EdgeAPI) return;
+        try {
+            const res = await EdgeAPI.awardPoints(action);
+            if (res && res.success) {
+                Auth.profile.points = res.points;
+                Auth.profile.level = res.level;
+                Toast.show(`+${res.awarded} points!`, 'success');
+                this.updateUI();
+                Auth.updateUI();
             }
+        } catch (e) {
+            console.warn("EdgeAPI awardPoints failed", e);
         }
-
-        Auth.updateProfile({ points: Auth.profile.points, level: Auth.profile.level });
-        Toast.show(`+${pts} points!`, 'success');
-        this.updateUI();
-        Auth.updateUI();
     },
 
     checkMilestones(stats) {

@@ -23,8 +23,14 @@ const Dashboard = {
     // Initialize dashboard
     init() {
         this.setupEventListeners();
-        this.start();
+        // Model health now reported by ml-predict edge function response
+        const badge = document.getElementById('model-health');
+        const stats = document.getElementById('model-stats');
+        if (badge) badge.textContent = 'Edge-Powered';
+        if (stats) stats.textContent = 'LinearReg + Polynomial + Kalman + WMA + ARIMA';
+        // start() is now called by auth.js upon successful login
     },
+
 
     // Setup event listeners
     setupEventListeners() {
@@ -107,11 +113,14 @@ const Dashboard = {
     },
 
     // Start dashboard updates
-    start() {
+    async start() {
         if (this.isRunning) return;
 
         this.isRunning = true;
         this.updateStatus('Running');
+
+        // Initial historical load for charts
+        await this._loadHistoricalData();
 
         // Initial update
         this.update();
@@ -131,23 +140,153 @@ const Dashboard = {
         }
     },
 
+    // Track data source
+    dataSource: 'simulation', // 'db' or 'simulation'
+
     // Main update loop
     async update() {
         try {
-            // Get simulation data
-            const data = await API.getSimulationData();
+            let tanks = null;
+            const isDemo = !window.EdgeAPI || !EdgeAPI.userId || EdgeAPI.userId.startsWith('demo');
 
-            if (data && data.tanks) {
-                this.updateTanks(data.tanks);
-                this.updateCharts(data.tanks);
-                this.updatePredictions(data.tanks, data.blendRatio);
-                this.updateStats(data.tanks);
+            // 1. Try to read the latest data from DB (Wokwi Live)
+            // If logged in as a real user, we prefer their specific live stream.
+            // If demo, we check if there's any global "live" data.
+            try {
+                // Use a short 2s timeout for live check
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 2000);
+
+                const dbData = await EdgeAPI.getLatestReadings(controller.signal);
+                clearTimeout(timeoutId);
+
+                if (dbData?.success && dbData.readings?.blended?.tds) {
+                    // Check if data is actually "fresh" (within last 30s)
+                    const latestTs = new Date(dbData.readings.blended.timestamp || 0).getTime();
+                    const now = Date.now();
+
+                    if (now - latestTs < 30000) {
+                        tanks = dbData.readings;
+                        console.log('Dashboard: Using live DB data source', tanks);
+                        this._setDataSource('db');
+                        this.updatePredictions(tanks, this.blendRatio);
+                    } else {
+                        console.log('Dashboard: DB data is too old', (now - latestTs) / 1000, 's');
+                    }
+                }
+            } catch (e) {
+                console.warn('DB live check failed or timed out:', e.message);
+            }
+
+            // 2. Fallback to Simulation (which might be DB Replay)
+            if (!tanks) {
+                const simData = await API.getSimulationData();
+                if (simData && simData.success) {
+                    tanks = simData.tanks;
+                    this._setDataSource('simulation');
+
+                    // Trigger predictions (EdgeAPI.predict handles the demo/real logic)
+                    this.updatePredictions(tanks, this.blendRatio);
+
+                    // Push simulation data back to DB for demo users so history works
+                    if (isDemo && window.EdgeAPI) {
+                        EdgeAPI.ingestSensorData(tanks, this.blendRatio).catch(e => { });
+                    }
+                }
+            }
+
+            // 3. Update UI if we have data
+            if (tanks) {
+                if (this.dataSource === 'simulation') {
+                    console.log('Dashboard: Using Simulation data source');
+                }
+                this.updateTanks(tanks);
+                this.updateCharts(tanks);
                 this.updateLastUpdate();
+                this.updateStats(tanks);
                 this.updateStatus('Running');
+            } else {
+                console.warn('Dashboard: No data received from any source');
+                this.updateStatus('Waiting for Data...');
             }
         } catch (error) {
             console.error('Dashboard update error:', error);
             this.updateStatus('Error');
+        }
+    },
+
+    // Update the data source badge in the UI
+    _setDataSource(source) {
+        if (this.dataSource === source) return;
+        this.dataSource = source;
+        const badge = document.getElementById('data-source-badge');
+        if (badge) {
+            badge.textContent = source === 'db' ? '🟢 Live (Wokwi)' : '🟡 Simulation';
+            badge.className = 'data-source-badge ' + source;
+        }
+        if (source === 'db') {
+            Toast.show('🟢 Switched to live sensor data from Wokwi!', 'success', 3000);
+        }
+    },
+
+    // Pre-fill charts with historical data from the DB if available
+    async _loadHistoricalData() {
+        const isLoggedIn = window.EdgeAPI && EdgeAPI.userId && !EdgeAPI.userId.startsWith('demo');
+        if (!isLoggedIn) return;
+
+        try {
+            const history = await EdgeAPI.getHistoricalReadings(50); // Get last 50 points
+            if (history && history.length > 0) {
+                // We'll reconstruct the grouped structure the charts expect
+                const historyByTimestamp = {};
+
+                history.forEach(reading => {
+                    const time = new Date(reading.timestamp).toLocaleTimeString('en-US', {
+                        hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit'
+                    });
+
+                    if (!historyByTimestamp[time]) {
+                        historyByTimestamp[time] = {
+                            ro_reject: { tds: 0, level: 0, temperature: 0 },
+                            rainwater: { tds: 0, level: 0, temperature: 0 },
+                            blended: { tds: 0, level: 0, temperature: 0 }
+                        };
+                    }
+
+                    if (reading.tank_type === 'ro_reject' || reading.tank_type === 'rainwater' || reading.tank_type === 'blended') {
+                        historyByTimestamp[time][reading.tank_type] = reading;
+                    }
+                });
+
+                // Keep the charts module clean and just push points in chronological order
+                Object.keys(historyByTimestamp).forEach(time => {
+                    Charts.addDataPoint(historyByTimestamp[time]);
+                    // overwrite the auto-generated time label in charts with the historical one
+                    const lastIdx = Charts.tdsData.labels.length - 1;
+                    Charts.tdsData.labels[lastIdx] = time;
+                    Charts.levelData.labels[lastIdx] = time;
+                    Charts.tempData.labels[lastIdx] = time;
+                });
+                Charts.updateCharts();
+
+                console.log(`Loaded ${Object.keys(historyByTimestamp).length} historical data points into charts`);
+            }
+        } catch (e) {
+            console.warn('Failed to load historical chart data:', e);
+        }
+    },
+
+    // Show active alerts as toasts (deduplicated, max 1 per type per cycle)
+    _shownAlertTypes: new Set(),
+    _showAlerts(alerts) {
+        if (!alerts?.length) return;
+        for (const a of alerts) {
+            if (this._shownAlertTypes.has(a.type)) continue;
+            this._shownAlertTypes.add(a.type);
+            const type = a.severity === 'critical' ? 'error' : 'warning';
+            Toast.show(a.message, type, 6000);
+            // Clear after 30s so same alert can reappear
+            setTimeout(() => this._shownAlertTypes.delete(a.type), 30000);
         }
     },
 
@@ -254,73 +393,104 @@ const Dashboard = {
             blended: tanks.blended
         };
 
-        const prediction = await API.calculatePrediction(
-            Auth.getUserId(),
-            readings,
-            blendRatio || this.blendRatio
-        );
-
-        if (prediction) {
-            this.lastPrediction = prediction;
-            this.displayPredictions(prediction);
+        // Enforce EdgeAPI usage for predictions
+        if (window.EdgeAPI && EdgeAPI.userId && !EdgeAPI.userId.startsWith('demo')) {
+            try {
+                const prediction = await EdgeAPI.predict({ userId: EdgeAPI.userId, readings });
+                if (prediction && prediction.success) {
+                    this.lastPrediction = prediction;
+                    this.displayPredictions(prediction);
+                }
+            } catch (err) {
+                console.warn("Edge prediction failed", err);
+            }
         }
     },
 
-    // Display prediction results
+    // Display prediction results (handles both edge function and local fallback format)
     displayPredictions(prediction) {
-        // Predicted TDS
+        // Support both edge function wrapper and local fallback
+        const p = prediction.prediction || prediction;
+
+        // Predicted TDS (short-term, 60s)
         const predictedTds = document.getElementById('predicted-tds');
         if (predictedTds) {
-            const value = prediction.predictions?.futureTDS ||
-                prediction.predictedTDS ||
-                '--';
+            const value = p.predictedTDS ?? p.predictions?.futureTDS ?? '--';
             predictedTds.textContent = typeof value === 'number' ? `${value.toFixed(1)} ppm` : value;
         }
 
         // TDS Trend
         const tdsTrend = document.getElementById('tds-trend');
         if (tdsTrend) {
-            const trend = prediction.predictions?.tdsTrend || prediction.tdsTrend || 'stable';
-            tdsTrend.textContent = trend.charAt(0).toUpperCase() + trend.slice(1);
-            tdsTrend.className = 'prediction-trend ' +
-                (trend === 'increasing' ? 'up' : trend === 'decreasing' ? 'down' : 'stable');
+            const trend = p.tdsTrend ?? p.predictions?.tdsTrend ?? 'stable';
+            const icons = { increasing: '📈', decreasing: '📉', stable: '➡️' };
+            tdsTrend.textContent = `${icons[trend] || ''} ${trend.charAt(0).toUpperCase() + trend.slice(1)}`;
+            tdsTrend.className = 'prediction-trend ' + trend;
         }
 
         // Time to target
         const timeToTarget = document.getElementById('time-to-target');
         if (timeToTarget) {
-            const time = prediction.timing?.timeToOptimalTDS || prediction.timeToTarget;
-            if (time && time.formatted) {
-                timeToTarget.textContent = time.formatted;
-            } else if (typeof time === 'number') {
-                timeToTarget.textContent = this.formatTime(time);
+            const ttt = p.timeToTarget ?? p.timing?.timeToOptimalTDS;
+            if (typeof ttt === 'number') {
+                timeToTarget.textContent = this.formatTime(ttt);
+            } else if (ttt?.formatted) {
+                timeToTarget.textContent = ttt.formatted;
             } else {
-                timeToTarget.textContent = 'N/A';
+                timeToTarget.textContent = 'Stable';
             }
         }
 
-        // Time to full
-        const timeToFull = document.getElementById('time-to-full');
-        if (timeToFull) {
-            const time = prediction.timing?.timeToTankFull || prediction.timeToFill;
-            if (time && time.formatted) {
-                timeToFull.textContent = time.formatted;
-            } else if (typeof time === 'number') {
-                timeToFull.textContent = this.formatTime(time);
-            } else {
-                timeToFull.textContent = 'N/A';
-            }
-        }
-
-        // Optimal blend
+        // Optimal blend ratio — shows useCase as tooltip
         const optimalBlend = document.getElementById('optimal-blend');
         if (optimalBlend) {
-            const ratio = prediction.recommendations?.optimalBlendRatio ||
-                prediction.optimalBlendRatio;
+            const ratio = p.optimalBlendRatio ?? p.recommendations?.optimalBlendRatio;
+            const useCase = p.useCase ? p.useCase.replace('_', ' ') : '';
             if (ratio) {
-                optimalBlend.textContent = `${Math.round(ratio.ro * 100)}% / ${Math.round(ratio.rain * 100)}%`;
+                optimalBlend.textContent = `RO ${Math.round(ratio.ro * 100)}% / Rain ${Math.round(ratio.rain * 100)}%`;
+                if (useCase) optimalBlend.title = `Best for: ${useCase}`;
             }
         }
+
+        // Model health
+        const modelHealth = document.getElementById('model-health');
+        const modelStats = document.getElementById('model-stats');
+        if (p.modelHealth) {
+            const { datapointsUsed, modelReady, r2Linear, r2Polynomial } = p.modelHealth;
+            if (modelHealth) {
+                modelHealth.textContent = modelReady
+                    ? `${Math.round((p.confidence || 0) * 100)}% confidence`
+                    : `Learning (${datapointsUsed}/5 pts)`;
+                modelHealth.classList.toggle('optimal', !!modelReady);
+            }
+            if (modelStats) {
+                modelStats.textContent = modelReady
+                    ? `R² lin: ${r2Linear} | poly: ${r2Polynomial} | n=${datapointsUsed}`
+                    : 'Waiting for more sensor data...';
+            }
+        }
+
+        // Anomaly / TDS status badge on blended tank
+        const badge = document.getElementById('tds-status');
+        if (badge && p.anomaly) {
+            badge.classList.remove('optimal', 'warning', 'danger');
+            if (p.isOptimal) {
+                badge.textContent = `${(p.useCase || 'Optimal').replace('_', ' ')} ✓`;
+                badge.classList.add('optimal');
+            } else if (p.anomaly.severity === 'severe') {
+                badge.textContent = '⚠️ Exceeds Limit';
+                badge.classList.add('danger');
+            } else if (p.anomaly.severity === 'mild') {
+                badge.textContent = '⚠️ Anomaly';
+                badge.classList.add('warning');
+            } else {
+                badge.textContent = (p.useCase || 'Monitoring').replace('_', ' ');
+                badge.classList.add('warning');
+            }
+        }
+
+        // Store last prediction for 'Use Optimal' button
+        this.lastPrediction = p;
     },
 
     // Update statistics

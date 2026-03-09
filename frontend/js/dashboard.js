@@ -167,8 +167,11 @@ const Dashboard = {
 
                     if (now - latestTs < 30000) {
                         tanks = dbData.readings;
+                        console.log('Dashboard: Using live DB data source', tanks);
                         this._setDataSource('db');
                         this.updatePredictions(tanks, this.blendRatio);
+                    } else {
+                        console.log('Dashboard: DB data is too old', (now - latestTs) / 1000, 's');
                     }
                 }
             } catch (e) {
@@ -194,12 +197,16 @@ const Dashboard = {
 
             // 3. Update UI if we have data
             if (tanks) {
+                if (this.dataSource === 'simulation') {
+                    console.log('Dashboard: Using Simulation data source');
+                }
                 this.updateTanks(tanks);
                 this.updateCharts(tanks);
                 this.updateLastUpdate();
                 this.updateStats(tanks);
                 this.updateStatus('Running');
             } else {
+                console.warn('Dashboard: No data received from any source');
                 this.updateStatus('Waiting for Data...');
             }
         } catch (error) {

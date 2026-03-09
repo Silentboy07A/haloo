@@ -198,10 +198,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize modules
     initTabs();
     Charts.init();
-    Dashboard.init();
+    API.init(); // Initialize simulation fallback
+    Dashboard.init(); // Initialize EventListeners and UI state
     Gamification.init();
     Payments.init();
 
     console.log('✅ SaveHydroo Ready!');
-    Toast.show('Dashboard connected!', 'success');
 });

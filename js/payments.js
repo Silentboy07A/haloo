@@ -46,18 +46,47 @@ const Payments = {
     },
 
     async loadBalance() {
-        const result = await API.getBalance(Auth.getUserId());
-        if (result?.balance !== undefined) {
-            this.updateBalanceDisplay(result.balance);
-            this.unlockedFeatures = result.unlockedFeatures || [];
-        } else if (Auth.profile) {
+        if (!Auth.isAuthenticated) return;
+
+        // Wait for auth profile to load if it hasn't yet
+        if (!Auth.profile) {
+            await Auth.loadProfile();
+        }
+
+        if (Auth.profile) {
             this.updateBalanceDisplay(Auth.profile.wallet_balance || 0);
+
+            // Try loading unlocked features from DB
+            try {
+                if (window.EdgeAPI && Auth.supabase) {
+                    const { data } = await Auth.supabase
+                        .from('user_features')
+                        .select('feature_id')
+                        .eq('user_id', Auth.user.id);
+
+                    if (data) {
+                        this.unlockedFeatures = data.map(f => f.feature_id);
+                        this.unlockedFeatures.forEach(id => {
+                            const card = document.querySelector(`[data-feature="${id}"]`);
+                            if (card) card.classList.add('unlocked');
+                        });
+                    }
+                }
+            } catch (e) {
+                console.warn('Failed to load unlocked features', e);
+            }
         }
     },
 
     async loadHistory() {
-        const result = await API.getTransactionHistory(Auth.getUserId());
-        this.transactions = result?.transactions || [];
+        if (!Auth.isAuthenticated || !window.EdgeAPI) return;
+
+        try {
+            const result = await EdgeAPI.getTransactionHistory();
+            this.transactions = result?.transactions || [];
+        } catch (e) {
+            console.warn('Failed to load history', e);
+        }
         this.renderHistory();
     },
 
@@ -70,32 +99,46 @@ const Payments = {
         const pkg = this.packages.find(p => p.id === packageId);
         if (!pkg) return;
 
+        if (!Auth.isAuthenticated) {
+            Toast.show('Please log in to purchase credits', 'warning');
+            return;
+        }
+
         Toast.show(`Processing ${pkg.name}...`, 'info');
 
-        // Simulate payment
-        await new Promise(r => setTimeout(r, 1500));
+        try {
+            if (!window.EdgeAPI) {
+                Toast.show('EdgeAPI not connected.', 'error');
+                return;
+            }
 
-        // 90% success rate
-        const success = Math.random() < 0.9;
+            // Call real Edge Function payment simulator
+            const result = await EdgeAPI.initiatePayment('credit_purchase', packageId);
+            const success = result?.success;
+            const transaction = result?.transaction;
 
-        if (success) {
-            const balance = (Auth.profile?.wallet_balance || 0) + pkg.credits;
-            Auth.updateProfile({ wallet_balance: balance });
-            this.updateBalanceDisplay(balance);
+            if (success) {
+                // Ensure profile updates with new wallet balance
+                await Auth.loadProfile();
+                this.updateBalanceDisplay(Auth.profile?.wallet_balance || 0);
 
-            this.transactions.unshift({
-                type: 'credit_purchase',
-                amount: pkg.price,
-                credits: pkg.credits,
-                status: 'successful',
-                description: `Purchased ${pkg.name}`,
-                created_at: new Date().toISOString()
-            });
+                this.transactions.unshift(transaction || {
+                    type: 'credit_purchase',
+                    amount: pkg.price,
+                    credits: pkg.credits,
+                    status: 'successful',
+                    description: `Purchased ${pkg.name}`,
+                    created_at: new Date().toISOString()
+                });
 
-            this.renderHistory();
-            Toast.show(`${pkg.credits} credits added!`, 'success');
-        } else {
-            Toast.show('Payment failed. Please try again.', 'error');
+                this.renderHistory();
+                Toast.show(`${pkg.credits} credits added!`, 'success');
+            } else {
+                Toast.show('Payment failed. Please try again.', 'error');
+            }
+        } catch (error) {
+            console.error('Payment error:', error);
+            Toast.show('Payment processing error.', 'error');
         }
     },
 
@@ -103,24 +146,56 @@ const Payments = {
         const feat = this.features.find(f => f.id === featureId);
         if (!feat) return;
 
+        if (!Auth.isAuthenticated) {
+            Toast.show('Please log in to unlock features', 'warning');
+            return;
+        }
+
         const balance = Auth.profile?.wallet_balance || 0;
         if (balance < feat.price) {
             Toast.show('Insufficient credits!', 'error');
             return;
         }
 
-        const newBalance = balance - feat.price;
-        Auth.updateProfile({ wallet_balance: newBalance });
-        this.updateBalanceDisplay(newBalance);
-        this.unlockedFeatures.push(featureId);
+        try {
+            if (!window.EdgeAPI) {
+                Toast.show('EdgeAPI not connected.', 'error');
+                return;
+            }
 
-        const card = document.querySelector(`[data-feature="${featureId}"]`);
-        if (card) card.classList.add('unlocked');
+            const result = await EdgeAPI.initiatePayment('feature_unlock', null, featureId);
+            const success = result?.success;
+            const transaction = result?.transaction;
 
-        Toast.show(`${feat.name} unlocked!`, 'success');
+            if (success) {
+                await Auth.loadProfile();
+                this.updateBalanceDisplay(Auth.profile?.wallet_balance || 0);
+                this.unlockedFeatures.push(featureId);
+
+                const card = document.querySelector(`[data-feature="${featureId}"]`);
+                if (card) card.classList.add('unlocked');
+
+                if (transaction) {
+                    this.transactions.unshift(transaction);
+                    this.renderHistory();
+                }
+
+                Toast.show(`${feat.name} unlocked!`, 'success');
+            } else {
+                Toast.show('Unlock failed. Please try again.', 'error');
+            }
+        } catch (error) {
+            console.error('Unlock error:', error);
+            Toast.show('Failed to process unlock.', 'error');
+        }
     },
 
     async donate() {
+        if (!Auth.isAuthenticated) {
+            Toast.show('Please log in to donate credits', 'warning');
+            return;
+        }
+
         const input = document.getElementById('donate-amount');
         const amount = parseInt(input?.value || 0);
 
@@ -135,20 +210,37 @@ const Payments = {
             return;
         }
 
-        const newBalance = balance - amount;
-        const bonusPoints = Math.round(amount * 0.5);
+        try {
+            if (!window.EdgeAPI) {
+                Toast.show('EdgeAPI not connected.', 'error');
+                return;
+            }
 
-        Auth.updateProfile({
-            wallet_balance: newBalance,
-            points: (Auth.profile.points || 0) + bonusPoints
-        });
+            const bonusPoints = Math.round(amount * 0.5);
+            const result = await EdgeAPI.initiatePayment('donation', null, null, amount, 'Donated credits');
+            const success = result?.success;
+            const transaction = result?.transaction;
 
-        this.updateBalanceDisplay(newBalance);
-        Gamification.updateUI();
-        Auth.updateUI();
+            if (success) {
+                await Auth.loadProfile();
+                this.updateBalanceDisplay(Auth.profile?.wallet_balance || 0);
+                Gamification.updateUI();
+                Auth.updateUI();
 
-        if (input) input.value = '';
-        Toast.show(`Donated ${amount} credits! +${bonusPoints} bonus points`, 'success');
+                if (transaction) {
+                    this.transactions.unshift(transaction);
+                    this.renderHistory();
+                }
+
+                if (input) input.value = '';
+                Toast.show(`Donated ${amount} credits! +${bonusPoints} bonus points`, 'success');
+            } else {
+                Toast.show('Donation failed.', 'error');
+            }
+        } catch (error) {
+            console.error('Donation error:', error);
+            Toast.show('Error processing donation.', 'error');
+        }
     },
 
     renderHistory() {

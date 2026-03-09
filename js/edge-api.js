@@ -1,0 +1,257 @@
+// ============================================
+// SAVEHYDROO - Updated API Client for Edge Functions
+// ============================================
+
+// Supabase Configuration
+const SUPABASE_URL = 'https://gjwabhyztjgqurirdwhx.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdqd2FiaHl6dGpncXVyaXJkd2h4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA1NTQ5NjgsImV4cCI6MjA4NjEzMDk2OH0.MnOkq65slHUQc6LfV_sBmUcmvvnQszmzDF03BcV3AwM';
+
+const EdgeAPI = {
+    // Supabase Edge Functions base URL
+    baseUrl: `${SUPABASE_URL}/functions/v1`,
+
+    // API Key
+    apiKey: SUPABASE_ANON_KEY,
+
+    // Authentication token (set after login)
+    authToken: null,
+
+    // Current user ID (set after login)
+    userId: null,
+
+    // Initialize API
+    init() {
+        console.log('Edge API initialized');
+        // Check for stored auth token
+        const storedAuth = localStorage.getItem('supabase.auth.token');
+        if (storedAuth) {
+            this.authToken = storedAuth;
+        }
+
+        // Persist userId so demo users don't get 0 values on refresh
+        const storedUid = localStorage.getItem('hydro_user_id');
+        if (storedUid) {
+            this.userId = storedUid;
+        } else {
+            this.userId = 'demo-user-' + Math.random().toString(36).substring(2, 9);
+            localStorage.setItem('hydro_user_id', this.userId);
+        }
+    },
+
+    // Generic fetch wrapper with auth
+    async request(endpoint, options = {}) {
+        const headers = {
+            'Content-Type': 'application/json',
+            'apikey': this.apiKey,
+            ...options.headers
+        };
+
+        if (this.authToken) {
+            headers['Authorization'] = `Bearer ${this.authToken}`;
+        }
+
+        const { signal, ...fetchOptions } = options;
+
+        const response = await fetch(`${this.baseUrl}/${endpoint}`, {
+            ...fetchOptions,
+            headers,
+            signal: signal || null
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || `HTTP error! status: ${response.status}`);
+        }
+
+        return await response.json();
+    },
+
+    // ============================================
+    // SENSOR DATA ENDPOINTS
+    // ============================================
+
+    // Ingest sensor data (primary endpoint)
+    async ingestSensorData(readings, blendRatio) {
+        return await this.request('sensor-ingest', {
+            method: 'POST',
+            body: JSON.stringify({
+                userId: this.userId,
+                readings,
+                blendRatio
+            })
+        });
+    },
+
+    // Get latest sensor readings
+    async getLatestReadings(signal = null) {
+        return await this.request(`sensor-ingest/latest?userId=${this.userId}`, {
+            method: 'GET',
+            signal
+        });
+    },
+
+    // Get historical readings for charts directly from Supabase REST API
+    async getHistoricalReadings(limit = 50) {
+        try {
+            const url = `${SUPABASE_URL}/rest/v1/sensor_readings?select=*&limit=${limit}&order=timestamp.desc`;
+
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': SUPABASE_ANON_KEY
+                }
+            });
+
+            if (!response.ok) return [];
+
+            const data = await response.json();
+            // Data is sorted descending (newest first). We need ascending (oldest first) for the charts.
+            return data.reverse();
+        } catch (e) {
+            console.error('Failed to fetch historical data:', e);
+            return [];
+        }
+    },
+
+    // ============================================
+    // ML PREDICTION ENDPOINTS
+    // ============================================
+
+    // Get ML prediction
+    async predict(data) {
+        const { userId, readings, stepsAhead = 60 } = data;
+        return await this.request('ml-predict', {
+            method: 'POST',
+            body: JSON.stringify({
+                userId: userId || this.userId,
+                readings,
+                stepsAhead
+            })
+        });
+    },
+
+    // ============================================
+    // GAMIFICATION ENDPOINTS
+    // ============================================
+
+    // Get user stats
+    async getStats() {
+        return await this.request(`gamification?userId=${this.userId}`, {
+            method: 'GET'
+        });
+    },
+
+    // Award points
+    async awardPoints(action, metadata = {}) {
+        return await this.request('gamification', {
+            method: 'POST',
+            body: JSON.stringify({
+                userId: this.userId,
+                action,
+                metadata
+            })
+        });
+    },
+
+    // Get leaderboard
+    async getLeaderboard() {
+        return await this.request('gamification?action=leaderboard', {
+            method: 'GET'
+        });
+    },
+
+    // ============================================
+    // PAYMENT ENDPOINTS
+    // ============================================
+
+    // Get available packages
+    async getPaymentPackages() {
+        return await this.request('payment-simulation?action=packages', {
+            method: 'GET'
+        });
+    },
+
+    // Initiate payment
+    async initiatePayment(type, packageId = null, featureId = null, amount = 0, description = '') {
+        return await this.request('payment-simulation', {
+            method: 'POST',
+            body: JSON.stringify({
+                userId: this.userId,
+                type,
+                packageId,
+                featureId,
+                amount,
+                description
+            })
+        });
+    },
+
+    // Get transaction history
+    async getTransactionHistory() {
+        return await this.request(`payment-simulation?userId=${this.userId}`, {
+            method: 'GET'
+        });
+    },
+
+    // ============================================
+    // ALERT CHECK ENDPOINTS
+    // ============================================
+
+    // Fetch alerts for the current user (unresolved by default)
+    async getAlerts(unresolvedOnly = true) {
+        return await this.request(
+            `alert-check?userId=${this.userId}&unresolvedOnly=${unresolvedOnly}`,
+            { method: 'GET' }
+        );
+    },
+
+    // Evaluate current sensor readings and create alerts if thresholds breached
+    async checkAlerts(readings) {
+        return await this.request('alert-check', {
+            method: 'POST',
+            body: JSON.stringify({
+                userId: this.userId,
+                readings
+            })
+        });
+    },
+
+    // Mark a specific alert as resolved
+    async resolveAlert(alertId) {
+        return await this.request('alert-check', {
+            method: 'PATCH',
+            body: JSON.stringify({
+                alertId,
+                userId: this.userId
+            })
+        });
+    },
+
+    // ============================================
+    // AUTHENTICATION HELPERS
+    // ============================================
+
+    setUserId(userId) {
+        this.userId = userId;
+        localStorage.setItem('hydro_user_id', userId);
+    },
+
+    setAuthToken(token) {
+        this.authToken = token;
+        localStorage.setItem('supabase.auth.token', token);
+    },
+
+    logout() {
+        this.authToken = null;
+        this.userId = null;
+        localStorage.removeItem('supabase.auth.token');
+        localStorage.removeItem('hydro_user_id');
+    }
+};
+
+// Initialize on load
+EdgeAPI.init();
+
+// Export for use
+window.EdgeAPI = EdgeAPI;
