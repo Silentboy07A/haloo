@@ -75,13 +75,19 @@ const Payments = {
         // Simulate payment
         await new Promise(r => setTimeout(r, 1500));
 
-        // 90% success rate
-        const success = Math.random() < 0.9;
+        // Let's make it 100% chance for the design demo to work smoothly
+        const success = true;
 
         if (success) {
-            const balance = (Auth.profile?.wallet_balance || 0) + pkg.credits;
-            Auth.updateProfile({ wallet_balance: balance });
-            this.updateBalanceDisplay(balance);
+            // Get current balance from UI to ensure it always updates locally
+            const balanceEl = document.getElementById('wallet-balance');
+            let currentBalance = parseInt(balanceEl ? balanceEl.textContent.replace(/,/g, '') : 0) || 0;
+            const newBalance = currentBalance + pkg.credits;
+
+            if (Auth.profile) {
+                Auth.updateProfile({ wallet_balance: newBalance });
+            }
+            this.updateBalanceDisplay(newBalance);
 
             this.transactions.unshift({
                 type: 'credit_purchase',
