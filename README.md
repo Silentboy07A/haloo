@@ -2,22 +2,22 @@
 
 **Smart Water Blending and Monitoring System**
 
-A fully software-based simulation of an intelligent water management system that blends RO reject water with rainwater to achieve optimal TDS levels.
+A smart water management system that blends RO reject water with rainwater to achieve optimal TDS levels. Now powered by **Azure Container Apps** and **Supabase**.
 
 ![Dashboard Preview](frontend/assets/dashboard-preview.png)
 
 ## 🌟 Features
 
-### Real-Time Simulation
+### Real-Time Live Sync
 - **3 Tank System**: RO Reject, Rainwater, and Blended tanks
-- **Sensor Simulation**: TDS, Temperature, Water Level, Flow Rate
-- **Dynamic Blending**: Adjustable blend ratios with real-time mixing
-- **Wokwi Compatible**: Arduino simulation files included
+- **Data Ingestion**: Wokwi IoT Simulator + Sensor Edge Ingest
+- **Live Database**: Dashboard fetches exclusively from live Supabase Tables
+- **Authentication**: Secure Google OAuth and Magic Link Login via Supabase Auth
 
-### ML Predictions
-- **TDS Forecasting**: Linear regression-based future TDS prediction
-- **Time Estimates**: Time to reach target TDS, time to fill tank
-- **Optimal Blend Calculation**: Auto-calculate best ratio for target TDS
+### Machine Learning via Edge Functions
+- **Trained Model Predictions**: Data-driven Linear Regression weights trained on 10,000 parameter combinations
+- **Short-term Ensemble**: ARIMA, WMA, Kalman filters running on Supabase Edge Functions (`ml-predict`)
+- **Actionable Insights**: Optimal blend ratios and time-to-target calculations
 
 ### Gamification
 - **Points System**: Earn points for water-saving actions
@@ -127,10 +127,11 @@ Once these secrets are active, simply push your code to the `main` branch or man
 ## 🔧 Tech Stack
 
 - **Frontend**: HTML, CSS, JavaScript, Chart.js
-- **Backend**: Vercel Serverless Functions
-- **Database**: Supabase (PostgreSQL)
-- **Simulation**: Wokwi, Custom JS Simulator
-- **ML**: Custom Linear Regression
+- **Cloud Hosting**: Azure Container Apps (via GitHub Actions CI/CD)
+- **Functions**: Supabase Edge Functions (Deno) for ML & Insights
+- **Database**: Supabase PostgreSQL (Real-time schema)
+- **Authentication**: Supabase Auth (OAuth & Passwordless)
+- **IoT Simulator**: Wokwi (Arduino)
 
 ## 🧪 Testing
 
