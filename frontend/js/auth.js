@@ -56,8 +56,16 @@ const Auth = {
         // Upsert profile row (safe to call on every login)
         await this._ensureProfile(user);
         await this.loadProfile();
+
+        // Refresh wallet/history now that user is authenticated
+        if (window.Payments) {
+            setTimeout(() => { Payments.loadBalance(); Payments.loadHistory(); }, 300);
+        }
+
         this.closeModal();
         this.updateUI();
+
+        Toast.show(`Welcome, ${user.user_metadata?.full_name || user.email?.split('@')[0] || 'Water Saver'}! 💧`, 'success');
     },
 
     _onSignedOut() {
@@ -65,6 +73,9 @@ const Auth = {
         this.profile = null;
         this.isAuthenticated = false;
         if (window.EdgeAPI) EdgeAPI.logout();
+        // Reset wallet display
+        const walletEl = document.getElementById('wallet-balance');
+        if (walletEl) walletEl.textContent = '0';
         this.updateUI();
     },
 
@@ -118,6 +129,10 @@ const Auth = {
         if (!error && data) {
             this.profile = data;
             this.updateUI();
+            // Sync wallet balance display
+            if (window.Payments) {
+                Payments.updateBalanceDisplay(data.wallet_balance || 0);
+            }
         }
     },
 
@@ -137,7 +152,8 @@ const Auth = {
         authForm?.addEventListener('submit', (e) => this.handleSubmit(e));
         authToggle?.addEventListener('click', (e) => { e.preventDefault(); this.toggleAuthMode(); });
         googleBtn?.addEventListener('click', () => this.loginWithGoogle());
-        forgotLink?.addEventListener('click', (e) => { e.preventDefault(); this.forgotPassword(); });
+        // 'Forgot Password?' becomes 'Send Magic Link' for passwordless login
+        forgotLink?.addEventListener('click', (e) => { e.preventDefault(); this.sendMagicLink(); });
     },
 
     // ── Google OAuth ──────────────────────────
@@ -217,9 +233,15 @@ const Auth = {
             this._setLoading(true, 'auth-submit', 'Signing in...');
 
             const { error } = await this.supabase.auth.signInWithPassword({ email, password });
-            if (error) throw error;
-
-            Toast.show('Welcome back! 👋', 'success');
+            if (error) {
+                if (error.message.toLowerCase().includes('email not confirmed')) {
+                    Toast.show('Email not confirmed yet. Use \'Send Magic Link\' below to sign in instantly!', 'warning', 8000);
+                    const fl = document.querySelector('.forgot-link');
+                    if (fl) fl.textContent = 'Send Magic Link';
+                    return;
+                }
+                throw error;
+            }
         } catch (err) {
             Toast.show('Login failed: ' + err.message, 'error');
         } finally {
@@ -227,19 +249,26 @@ const Auth = {
         }
     },
 
-    async forgotPassword() {
+    // Send magic link (passwordless login via email)
+    async sendMagicLink() {
         const email = document.getElementById('email').value.trim();
         if (!email) {
             Toast.show('Enter your email address first', 'warning');
             return;
         }
-        const { error } = await this.supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: window.location.origin
+        const forgotBtn = document.querySelector('.forgot-link');
+        if (forgotBtn) forgotBtn.textContent = 'Sending...';
+
+        const { error } = await this.supabase.auth.signInWithOtp({
+            email,
+            options: { emailRedirectTo: window.location.origin }
         });
         if (error) {
-            Toast.show('Reset email failed: ' + error.message, 'error');
+            Toast.show('Failed to send magic link: ' + error.message, 'error');
+            if (forgotBtn) forgotBtn.textContent = 'Send Magic Link';
         } else {
-            Toast.show('Password reset email sent!', 'success');
+            Toast.show('✉️ Magic link sent! Check your email inbox to sign in.', 'success', 7000);
+            if (forgotBtn) forgotBtn.textContent = 'Magic Link Sent ✓';
         }
     },
 
@@ -277,6 +306,9 @@ const Auth = {
         if (tt) tt.textContent = isSignup ? 'Already have an account?' : "Don't have an account?";
         if (tl) tl.textContent = isSignup ? 'Sign in' : 'Create one';
         if (ug) ug.style.display = isSignup ? 'block' : 'none';
+        // Update forgot/magic link label
+        const fl = document.querySelector('.forgot-link');
+        if (fl) fl.textContent = isSignup ? 'Forgot Password?' : 'Send Magic Link';
     },
 
     // ── UI ────────────────────────────────────
