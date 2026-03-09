@@ -79,16 +79,11 @@ const Payments = {
     },
 
     async loadHistory() {
-        if (!Auth.isAuthenticated) return;
+        if (!Auth.isAuthenticated || !window.EdgeAPI) return;
 
         try {
-            if (window.EdgeAPI) {
-                const result = await EdgeAPI.getTransactionHistory();
-                this.transactions = result?.transactions || [];
-            } else {
-                const result = await API.getTransactionHistory(Auth.getUserId());
-                this.transactions = result?.transactions || [];
-            }
+            const result = await EdgeAPI.getTransactionHistory();
+            this.transactions = result?.transactions || [];
         } catch (e) {
             console.warn('Failed to load history', e);
         }
@@ -112,32 +107,19 @@ const Payments = {
         Toast.show(`Processing ${pkg.name}...`, 'info');
 
         try {
-            let success = false;
-            let transaction = null;
-
-            if (window.EdgeAPI) {
-                // Call real Edge Function payment simulator
-                const result = await EdgeAPI.initiatePayment('credit_purchase', packageId);
-                success = result?.success;
-                transaction = result?.transaction;
-            } else {
-                // Local mock fallback
-                await new Promise(r => setTimeout(r, 1500));
-                success = true;
+            if (!window.EdgeAPI) {
+                Toast.show('EdgeAPI not connected.', 'error');
+                return;
             }
 
-            if (success) {
-                if (window.EdgeAPI) {
-                    await Auth.loadProfile();
-                } else {
-                    const currentBalance = Number(Auth.profile?.wallet_balance) || 0;
-                    const addedCredits = Number(pkg.credits) || 0;
-                    const newBalance = currentBalance + addedCredits;
-                    if (typeof Auth.updateProfile === 'function') {
-                        Auth.updateProfile({ wallet_balance: newBalance });
-                    }
-                }
+            // Call real Edge Function payment simulator
+            const result = await EdgeAPI.initiatePayment('credit_purchase', packageId);
+            const success = result?.success;
+            const transaction = result?.transaction;
 
+            if (success) {
+                // Ensure profile updates with new wallet balance
+                await Auth.loadProfile();
                 this.updateBalanceDisplay(Auth.profile?.wallet_balance || 0);
 
                 this.transactions.unshift(transaction || {
@@ -176,27 +158,17 @@ const Payments = {
         }
 
         try {
-            let success = false;
-            let transaction = null;
-
-            if (window.EdgeAPI) {
-                const result = await EdgeAPI.initiatePayment('feature_unlock', null, featureId);
-                success = result?.success;
-                transaction = result?.transaction;
-            } else {
-                success = true;
+            if (!window.EdgeAPI) {
+                Toast.show('EdgeAPI not connected.', 'error');
+                return;
             }
 
-            if (success) {
-                if (window.EdgeAPI) {
-                    await Auth.loadProfile();
-                } else {
-                    const newBalance = balance - feat.price;
-                    if (typeof Auth.updateProfile === 'function') {
-                        Auth.updateProfile({ wallet_balance: newBalance });
-                    }
-                }
+            const result = await EdgeAPI.initiatePayment('feature_unlock', null, featureId);
+            const success = result?.success;
+            const transaction = result?.transaction;
 
+            if (success) {
+                await Auth.loadProfile();
                 this.updateBalanceDisplay(Auth.profile?.wallet_balance || 0);
                 this.unlockedFeatures.push(featureId);
 
@@ -239,31 +211,18 @@ const Payments = {
         }
 
         try {
-            let success = false;
-            let transaction = null;
-            const bonusPoints = Math.round(amount * 0.5);
-
-            if (window.EdgeAPI) {
-                const result = await EdgeAPI.initiatePayment('donation', null, null, amount, 'Donated credits');
-                success = result?.success;
-                transaction = result?.transaction;
-            } else {
-                success = true;
+            if (!window.EdgeAPI) {
+                Toast.show('EdgeAPI not connected.', 'error');
+                return;
             }
 
-            if (success) {
-                if (window.EdgeAPI) {
-                    await Auth.loadProfile();
-                } else {
-                    const newBalance = balance - amount;
-                    if (typeof Auth.updateProfile === 'function') {
-                        Auth.updateProfile({
-                            wallet_balance: newBalance,
-                            points: (Auth.profile?.points || 0) + bonusPoints
-                        });
-                    }
-                }
+            const bonusPoints = Math.round(amount * 0.5);
+            const result = await EdgeAPI.initiatePayment('donation', null, null, amount, 'Donated credits');
+            const success = result?.success;
+            const transaction = result?.transaction;
 
+            if (success) {
+                await Auth.loadProfile();
                 this.updateBalanceDisplay(Auth.profile?.wallet_balance || 0);
                 Gamification.updateUI();
                 Auth.updateUI();

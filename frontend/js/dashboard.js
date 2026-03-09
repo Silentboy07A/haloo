@@ -369,15 +369,17 @@ const Dashboard = {
             blended: tanks.blended
         };
 
-        const prediction = await API.calculatePrediction(
-            Auth.getUserId(),
-            readings,
-            blendRatio || this.blendRatio
-        );
-
-        if (prediction) {
-            this.lastPrediction = prediction;
-            this.displayPredictions(prediction);
+        // Enforce EdgeAPI usage for predictions
+        if (window.EdgeAPI && EdgeAPI.userId && !EdgeAPI.userId.startsWith('demo')) {
+            try {
+                const prediction = await EdgeAPI.predict({ userId: EdgeAPI.userId, readings });
+                if (prediction && prediction.success) {
+                    this.lastPrediction = prediction;
+                    this.displayPredictions(prediction);
+                }
+            } catch (err) {
+                console.warn("Edge prediction failed", err);
+            }
         }
     },
 
