@@ -21,9 +21,10 @@ const API = {
 
     async getSimulationData() {
         if (this.simulation) {
-            return this.simulation.step();
+            const data = this.simulation.step();
+            return { success: true, ...data };
         }
-        return null;
+        return { success: false };
     },
 
     async resetSimulation(seed = 12345) {
