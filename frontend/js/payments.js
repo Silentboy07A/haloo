@@ -46,18 +46,52 @@ const Payments = {
     },
 
     async loadBalance() {
-        const result = await API.getBalance(Auth.getUserId());
-        if (result?.balance !== undefined) {
-            this.updateBalanceDisplay(result.balance);
-            this.unlockedFeatures = result.unlockedFeatures || [];
-        } else if (Auth.profile) {
+        if (!Auth.isAuthenticated) return;
+
+        // Wait for auth profile to load if it hasn't yet
+        if (!Auth.profile) {
+            await Auth.loadProfile();
+        }
+
+        if (Auth.profile) {
             this.updateBalanceDisplay(Auth.profile.wallet_balance || 0);
+
+            // Try loading unlocked features from DB
+            try {
+                if (window.EdgeAPI && Auth.supabase) {
+                    const { data } = await Auth.supabase
+                        .from('user_features')
+                        .select('feature_id')
+                        .eq('user_id', Auth.user.id);
+
+                    if (data) {
+                        this.unlockedFeatures = data.map(f => f.feature_id);
+                        this.unlockedFeatures.forEach(id => {
+                            const card = document.querySelector(`[data-feature="${id}"]`);
+                            if (card) card.classList.add('unlocked');
+                        });
+                    }
+                }
+            } catch (e) {
+                console.warn('Failed to load unlocked features', e);
+            }
         }
     },
 
     async loadHistory() {
-        const result = await API.getTransactionHistory(Auth.getUserId());
-        this.transactions = result?.transactions || [];
+        if (!Auth.isAuthenticated) return;
+
+        try {
+            if (window.EdgeAPI) {
+                const result = await EdgeAPI.getTransactionHistory();
+                this.transactions = result?.transactions || [];
+            } else {
+                const result = await API.getTransactionHistory(Auth.getUserId());
+                this.transactions = result?.transactions || [];
+            }
+        } catch (e) {
+            console.warn('Failed to load history', e);
+        }
         this.renderHistory();
     },
 
@@ -94,10 +128,15 @@ const Payments = {
 
             if (success) {
                 // Get current balance from UI or Profile
-                const currentBalance = Auth.profile?.wallet_balance ||
-                    (parseInt(document.getElementById('wallet-balance')?.textContent.replace(/,/g, '')) || 0);
+                let currentBalance = Auth.profile?.wallet_balance;
+                if (currentBalance === undefined) {
+                    const uiBalanceText = document.getElementById('wallet-balance')?.textContent || '0';
+                    currentBalance = parseInt(uiBalanceText.replace(/,/g, '')) || 0;
+                }
 
-                const addedCredits = transaction?.credits || pkg.credits;
+                // Ensure values are numbers
+                currentBalance = Number(currentBalance) || 0;
+                const addedCredits = Number(transaction?.credits || pkg.credits) || 0;
                 const newBalance = currentBalance + addedCredits;
 
                 if (Auth.profile && typeof Auth.updateProfile === 'function') {

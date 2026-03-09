@@ -155,14 +155,14 @@ const EdgeAPI = {
 
     // Get available packages
     async getPaymentPackages() {
-        return await this.request('payment?action=packages', {
+        return await this.request('payment-simulation?action=packages', {
             method: 'GET'
         });
     },
 
     // Initiate payment
     async initiatePayment(type, packageId = null, featureId = null, amount = 0, description = '') {
-        return await this.request('payment', {
+        return await this.request('payment-simulation', {
             method: 'POST',
             body: JSON.stringify({
                 userId: this.userId,
@@ -177,7 +177,7 @@ const EdgeAPI = {
 
     // Get transaction history
     async getTransactionHistory() {
-        return await this.request(`payment?userId=${this.userId}`, {
+        return await this.request(`payment-simulation?userId=${this.userId}`, {
             method: 'GET'
         });
     },

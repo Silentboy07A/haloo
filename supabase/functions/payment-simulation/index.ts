@@ -183,6 +183,7 @@ serve(async (req) => {
                 .eq("id", transaction.id);
 
             // If successful, update user wallet and unlock features
+            let returnedNewBalance = 0;
             if (paymentResult.success) {
                 const { data: profile } = await supabaseClient
                     .from("profiles")
@@ -191,7 +192,8 @@ serve(async (req) => {
                     .single();
 
                 if (profile) {
-                    const newBalance = parseFloat(profile.wallet_balance) + credits;
+                    const newBalance = parseFloat(profile.wallet_balance || 0) + credits;
+                    returnedNewBalance = newBalance;
 
                     await supabaseClient
                         .from("profiles")
@@ -215,6 +217,7 @@ serve(async (req) => {
             return new Response(
                 JSON.stringify({
                     success: true,
+                    newBalance: returnedNewBalance,
                     transaction: {
                         id: transaction.id,
                         status: finalStatus,
