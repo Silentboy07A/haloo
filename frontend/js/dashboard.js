@@ -28,7 +28,7 @@ const Dashboard = {
         const stats = document.getElementById('model-stats');
         if (badge) badge.textContent = 'Edge-Powered';
         if (stats) stats.textContent = 'LinearReg + Polynomial + Kalman + WMA + ARIMA';
-        this.start();
+        // start() is now called by auth.js upon successful login
     },
 
 
@@ -147,61 +147,25 @@ const Dashboard = {
     async update() {
         try {
             let tanks = null;
-            let blendRatio = this.blendRatio;
-            const isLoggedIn = window.EdgeAPI && EdgeAPI.userId && !EdgeAPI.userId.startsWith('demo');
 
-            if (isLoggedIn) {
-                // Step 1: Generate fresh data from local simulation
-                const simData = await API.getSimulationData();
-                const simTanks = simData?.tanks || null;
-                blendRatio = simData?.blendRatio || blendRatio;
+            // Read the latest data from DB to display
+            try {
+                const dbData = await EdgeAPI.getLatestReadings();
+                if (dbData?.success && dbData.readings?.blended?.tds) {
+                    tanks = dbData.readings;
+                    this._setDataSource('db');
 
-                // Step 2: Push simulation data + real Wokwi data to DB via sensor-ingest
-                //         sensor-ingest also runs: ml-predict, alert-check, gamification
-                try {
-                    const ingestPayload = simTanks || {};
-                    const result = await EdgeAPI.ingestSensorData(ingestPayload, blendRatio);
-                    if (result?.success) {
-                        if (result.prediction) this.displayPredictions(result);
-                        if (result.alert) this._showAlerts(result.alert);
-                        if (result.points?.newAchievements?.length) {
-                            result.points.newAchievements.forEach(a =>
-                                Toast.show(`${a.icon || '🏆'} Achievement: ${a.name} (+${a.points} pts)!`, 'success', 5000)
-                            );
-                        }
-                    }
-                } catch (e) {
-                    console.warn('sensor-ingest failed, local prediction fallback:', e.message);
-                    if (simTanks) this.updatePredictions(simTanks, blendRatio);
+                    // Trigger a local UI update for predictions based on the real DB values
+                    this.updatePredictions(tanks, this.blendRatio);
                 }
-
-                // Step 3: Read the latest data back from DB to display
-                try {
-                    const dbData = await EdgeAPI.getLatestReadings();
-                    if (dbData?.success && dbData.readings?.blended?.tds) {
-                        tanks = dbData.readings;
-                        this._setDataSource('db');
-                    }
-                } catch (e) {
-                    console.warn('DB read failed:', e.message);
-                }
-
-                // Fallback to sim data if DB read didn't return anything
-                if (!tanks && simTanks) {
-                    tanks = simTanks;
-                    this._setDataSource('simulation');
-                }
-            } else {
-                // Not logged in: just use local simulation
-                const simData = await API.getSimulationData();
-                if (!simData?.tanks) return;
-                tanks = simData.tanks;
-                blendRatio = simData.blendRatio || blendRatio;
-                this._setDataSource('simulation');
-                this.updatePredictions(tanks, blendRatio);
+            } catch (e) {
+                console.warn('DB read failed:', e.message);
             }
 
-            if (!tanks) return;
+            if (!tanks) {
+                this.updateStatus('Waiting for DB...');
+                return;
+            }
 
             this.updateTanks(tanks);
             this.updateCharts(tanks);

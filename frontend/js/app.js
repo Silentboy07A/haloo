@@ -198,10 +198,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize modules
     initTabs();
     Charts.init();
-    Dashboard.init();
+    // Dashboard.init() is now triggered by Auth._onSignedIn
+    Dashboard.setupEventListeners(); // We can set up listeners, but not start loop
     Gamification.init();
     Payments.init();
 
     console.log('✅ SaveHydroo Ready!');
-    Toast.show('Dashboard connected!', 'success');
 });

@@ -1,0 +1,26 @@
+SaveHydroo — ML Training Report
+============================================================
+
+  Linear Regression (baseline):
+    Train R2=0.9998  Test R2=0.9998  RMSE=5.1 ppm  MAE=4.1 ppm  Gap=0.000 -> GOOD_FIT
+    Accuracy: ~100.0%
+  Ridge Regression + lags:
+    Train R2=0.9998  Test R2=0.9998  RMSE=5.1 ppm  MAE=4.1 ppm  Gap=0.000 -> GOOD_FIT
+    Accuracy: ~100.0%
+  Polynomial deg=2 + lags:
+    Train R2=0.9998  Test R2=0.9998  RMSE=5.2 ppm  MAE=4.1 ppm  Gap=0.000 -> GOOD_FIT
+    Accuracy: ~100.0%
+  Gradient Boosting:
+    Train R2=0.9966  Test R2=0.9897  RMSE=34.3 ppm  MAE=13.8 ppm  Gap=0.007 -> GOOD_FIT
+    Accuracy: ~99.0%
+  Random Forest:
+    Train R2=0.9957  Test R2=0.9834  RMSE=43.5 ppm  MAE=14.0 ppm  Gap=0.012 -> GOOD_FIT
+    Accuracy: ~98.3%
+
+============================================================
+BEST MODEL: Linear Regression (baseline)
+  Test R2  = 0.9998
+  RMSE     = 5.1 ppm
+  MAE      = 4.1 ppm
+  Accuracy = ~100.0%
+  Status   = GOOD_FIT

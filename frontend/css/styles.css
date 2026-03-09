@@ -1565,11 +1565,7 @@ canvas {
 }
 
 /* ============================================
-   MODAL - PREMIUM DESIGN
-   ============================================ */
-
-/* ============================================
-   MODAL - PREMIUM DESIGN
+   MODAL - PREMIUM REDESIGN
    ============================================ */
 
 .modal {
@@ -1578,18 +1574,18 @@ canvas {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.85);
     display: none;
     align-items: center;
     justify-content: center;
     z-index: 200;
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
 }
 
 .modal.active {
     display: flex;
-    animation: modalIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: modalIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes modalIn {
@@ -1602,44 +1598,105 @@ canvas {
     }
 }
 
+/* Floating Water Particles */
+.modal-particles {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+}
+
+.particle {
+    position: absolute;
+    bottom: -10px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.7), rgba(34, 211, 238, 0.3));
+    animation: particleRise linear infinite;
+    pointer-events: none;
+}
+
+@keyframes particleRise {
+    0% {
+        transform: translateY(0) scale(1);
+        opacity: 0;
+    }
+
+    10% {
+        opacity: var(--particle-opacity, 0.3);
+    }
+
+    90% {
+        opacity: var(--particle-opacity, 0.3);
+    }
+
+    100% {
+        transform: translateY(-100vh) scale(0.3);
+        opacity: 0;
+    }
+}
+
+/* Modal Card — Glassmorphic */
 .modal-content {
-    background: rgba(30, 41, 59, 0.7);
-    border-radius: 32px;
+    background: rgba(15, 23, 42, 0.85);
+    border-radius: 28px;
     padding: 48px 40px;
     width: 100%;
     max-width: 440px;
     position: relative;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 1;
+    border: 1px solid rgba(59, 130, 246, 0.15);
     box-shadow:
-        0 25px 50px -12px rgba(0, 0, 0, 0.5),
-        inset 0 1px 1px rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(12px);
+        0 0 80px rgba(59, 130, 246, 0.08),
+        0 25px 60px -12px rgba(0, 0, 0, 0.6),
+        inset 0 1px 1px rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(16px);
     overflow: hidden;
-    /* For liquid container */
+    animation: cardSlideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
 }
 
-/* Liquid Background Animation */
+@keyframes cardSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.96);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Dual Liquid Waves */
 .liquid-container {
     position: absolute;
     bottom: 0;
     left: 0;
     width: 100%;
-    height: 120px;
+    height: 140px;
     pointer-events: none;
     z-index: 0;
-    opacity: 0.4;
+    opacity: 0.35;
 }
 
 .liquid-wave {
     position: absolute;
-    bottom: 0;
+    bottom: -10px;
     left: 0;
     width: 200%;
     height: 100%;
-    background: var(--gradient-primary);
-    border-radius: 38%;
+    background: linear-gradient(135deg, #3b82f6, #22d3ee, #3b82f6);
+    border-radius: 40%;
     animation: liquidMove 10s infinite linear;
     transform: translateX(-25%);
+}
+
+.liquid-wave.wave-2 {
+    height: 80%;
+    opacity: 0.5;
+    animation: liquidMove 14s infinite linear reverse;
+    background: linear-gradient(135deg, #22d3ee, #8b5cf6, #22d3ee);
+    border-radius: 35%;
 }
 
 @keyframes liquidMove {
@@ -1657,49 +1714,121 @@ canvas {
     z-index: 1;
 }
 
+/* Close Button */
 .modal-close {
     position: absolute;
-    top: 24px;
-    right: 24px;
-    width: 32px;
-    height: 32px;
+    top: 20px;
+    right: 20px;
+    width: 36px;
+    height: 36px;
     background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 50%;
     color: var(--text-muted);
     cursor: pointer;
-    transition: all var(--transition-normal);
+    transition: all 0.3s ease;
     display: flex;
     align-items: center;
     justify-content: center;
+    font-size: 1.2rem;
+    z-index: 2;
 }
 
 .modal-close:hover {
-    background: var(--accent-red);
+    background: rgba(239, 68, 68, 0.8);
     color: white;
-    transform: rotate(90deg);
+    transform: rotate(90deg) scale(1.1);
+    border-color: transparent;
 }
 
+/* Animated Header Icon with Rings */
 .modal-header-icon {
-    width: 70px;
-    height: 70px;
-    margin: 0 auto 16px;
-    background: var(--gradient-primary);
-    border-radius: 22px;
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 20px;
+    background: linear-gradient(135deg, #1e40af, #3b82f6, #22d3ee);
+    border-radius: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 32px;
-    box-shadow: 0 10px 25px var(--accent-blue-glow);
+    font-size: 36px;
+    box-shadow:
+        0 10px 30px rgba(59, 130, 246, 0.3),
+        0 0 60px rgba(59, 130, 246, 0.15);
     transform: rotate(-5deg);
+    position: relative;
+    animation: iconFloat 4s ease-in-out infinite;
 }
 
+.drop-icon {
+    filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.6));
+    animation: dropPulse 2s ease-in-out infinite;
+}
+
+.icon-ring {
+    position: absolute;
+    inset: -8px;
+    border-radius: 28px;
+    border: 2px solid rgba(59, 130, 246, 0.3);
+    animation: ringPulse 3s ease-in-out infinite;
+}
+
+.icon-ring.ring-2 {
+    inset: -16px;
+    border-radius: 32px;
+    border-color: rgba(34, 211, 238, 0.15);
+    animation-delay: 1s;
+}
+
+@keyframes iconFloat {
+
+    0%,
+    100% {
+        transform: rotate(-5deg) translateY(0);
+    }
+
+    50% {
+        transform: rotate(-5deg) translateY(-6px);
+    }
+}
+
+@keyframes dropPulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+@keyframes ringPulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 0.6;
+    }
+
+    50% {
+        transform: scale(1.08);
+        opacity: 0.2;
+    }
+}
+
+/* Heading */
 .modal-content h2 {
     text-align: center;
     font-size: 2rem;
     font-weight: 800;
     margin-bottom: 8px;
     letter-spacing: -1px;
+    background: linear-gradient(180deg, #ffffff 30%, rgba(255, 255, 255, 0.7) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
 .modal-subtitle {
@@ -1709,33 +1838,35 @@ canvas {
     margin-bottom: 32px;
 }
 
-/* OAuth Buttons */
+/* OAuth Buttons — Full Width */
 .oauth-buttons {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    flex-direction: column;
     gap: 12px;
     margin-bottom: 24px;
 }
 
 .btn-oauth {
-    padding: 14px;
-    border-radius: 16px;
+    padding: 14px 20px;
+    border-radius: 14px;
     border: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(255, 255, 255, 0.03);
+    background: rgba(255, 255, 255, 0.04);
     color: var(--text-primary);
     font-weight: 600;
+    font-size: 0.95rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 10px;
     cursor: pointer;
-    transition: all var(--transition-normal);
+    transition: all 0.3s ease;
 }
 
 .btn-oauth:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.1);
     transform: translateY(-2px);
-    border-color: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.25);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 }
 
 .oauth-icon {
@@ -1743,11 +1874,34 @@ canvas {
     height: 20px;
 }
 
-/* Form Elements - Floating Labels */
+/* Divider */
+.auth-divider {
+    display: flex;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+}
+
+.auth-divider span {
+    padding: 0 16px;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Form — Floating Labels + Icons */
 .auth-form {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 18px;
 }
 
 .floating-group {
@@ -1756,14 +1910,25 @@ canvas {
 
 .floating-group input {
     width: 100%;
-    padding: 18px 16px 10px;
-    background: rgba(0, 0, 0, 0.2);
-    border: 1.5px solid rgba(255, 255, 255, 0.08);
+    padding: 18px 48px 10px 16px;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1.5px solid rgba(255, 255, 255, 0.06);
     border-radius: 14px;
     color: white;
     font-size: 1rem;
     outline: none;
-    transition: all 0.3s;
+    transition: all 0.3s ease;
+}
+
+.floating-group input:focus {
+    border-color: var(--accent-blue);
+    background: rgba(0, 0, 0, 0.35);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.floating-group input:not(:placeholder-shown) {
+    border-color: rgba(59, 130, 246, 0.3);
+    background: rgba(0, 0, 0, 0.3);
 }
 
 .floating-group label {
@@ -1777,31 +1942,62 @@ canvas {
     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.floating-group input:focus,
-.floating-group input:not(:placeholder-shown) {
-    border-color: var(--accent-blue);
-    background: rgba(0, 0, 0, 0.3);
-}
-
 .floating-group input:focus~label,
 .floating-group input:not(:placeholder-shown)~label {
     top: 12px;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 700;
     color: var(--accent-blue-bright);
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 
+.input-icon {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.9rem;
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+/* Password Toggle */
+.password-toggle {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+}
+
+.password-toggle:hover {
+    opacity: 1;
+    color: var(--accent-blue-bright);
+}
+
+.eye-icon {
+    display: block;
+}
+
+/* Form Options */
 .form-options {
     display: flex;
     justify-content: flex-end;
+    margin-top: -4px;
 }
 
 .forgot-link {
     font-size: 0.85rem;
     color: var(--text-muted);
     text-decoration: none;
+    transition: color 0.2s;
 }
 
 .forgot-link:hover {
@@ -1814,20 +2010,42 @@ canvas {
     padding: 18px;
     border-radius: 16px;
     border: none;
-    background: var(--gradient-primary);
+    background: linear-gradient(135deg, #2563eb, #3b82f6, #22d3ee);
+    background-size: 200% 200%;
+    animation: gradientShift 4s ease infinite;
     color: white;
     font-weight: 700;
     font-size: 1.1rem;
     cursor: pointer;
     position: relative;
     overflow: hidden;
-    box-shadow: 0 10px 20px var(--accent-blue-glow);
-    transition: all var(--transition-normal);
+    box-shadow:
+        0 10px 24px rgba(59, 130, 246, 0.25),
+        0 0 40px rgba(59, 130, 246, 0.1);
+    transition: all 0.3s ease;
+}
+
+@keyframes gradientShift {
+
+    0%,
+    100% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
 }
 
 .btn-primary:hover {
     transform: translateY(-3px);
-    box-shadow: 0 15px 30px var(--accent-blue-glow);
+    box-shadow:
+        0 15px 35px rgba(59, 130, 246, 0.35),
+        0 0 60px rgba(59, 130, 246, 0.15);
+}
+
+.btn-primary:active {
+    transform: translateY(-1px);
 }
 
 .btn-glow {
@@ -1844,10 +2062,30 @@ canvas {
     left: 100%;
 }
 
+.btn-shimmer {
+    position: absolute;
+    top: 0;
+    left: -200%;
+    width: 200%;
+    height: 100%;
+    background: linear-gradient(90deg,
+            transparent 25%,
+            rgba(255, 255, 255, 0.08) 50%,
+            transparent 75%);
+    animation: shimmer 3s infinite linear;
+}
+
+@keyframes shimmer {
+    to {
+        transform: translateX(100%);
+    }
+}
+
+/* Toggle */
 .auth-toggle {
-    margin-top: 32px;
+    margin-top: 28px;
     text-align: center;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     color: var(--text-muted);
 }
 
@@ -1856,9 +2094,11 @@ canvas {
     font-weight: 700;
     text-decoration: none;
     margin-left: 5px;
+    transition: color 0.2s;
 }
 
 .auth-toggle a:hover {
+    color: #22d3ee;
     text-decoration: underline;
 }
 

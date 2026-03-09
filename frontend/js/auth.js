@@ -39,6 +39,13 @@ const Auth = {
 
         this.setupEventListeners();
         this.updateUI();
+
+        // Force login if not authenticated
+        if (!this.isAuthenticated) {
+            this.openModal();
+            const mainContent = document.querySelector('.main-content');
+            if (mainContent) mainContent.style.display = 'none';
+        }
     },
 
     // Called whenever a user is authenticated
@@ -62,8 +69,16 @@ const Auth = {
             setTimeout(() => { Payments.loadBalance(); Payments.loadHistory(); }, 300);
         }
 
+        const mainContent = document.querySelector('.main-content');
+        if (mainContent) mainContent.style.display = 'block';
+
         this.closeModal();
         this.updateUI();
+
+        // Start dashboard if it hasn't been started
+        if (window.Dashboard && !window.Dashboard.isRunning) {
+            window.Dashboard.start();
+        }
 
         Toast.show(`Welcome, ${user.user_metadata?.full_name || user.email?.split('@')[0] || 'Water Saver'}! 💧`, 'success');
     },
@@ -76,6 +91,12 @@ const Auth = {
         // Reset wallet display
         const walletEl = document.getElementById('wallet-balance');
         if (walletEl) walletEl.textContent = '0';
+
+        const mainContent = document.querySelector('.main-content');
+        if (mainContent) mainContent.style.display = 'none';
+
+        if (window.Dashboard) window.Dashboard.stop();
+        this.openModal();
         this.updateUI();
     },
 
@@ -288,6 +309,10 @@ const Auth = {
     },
 
     closeModal() {
+        if (!this.isAuthenticated) {
+            Toast.show('You must sign in to view the dashboard.', 'warning');
+            return;
+        }
         document.getElementById('auth-modal')?.classList.remove('active');
     },
 

@@ -40,6 +40,113 @@ const HISTORY_LIMIT = 100;
 const TREND_THRESH = 0.5;
 const ANOMALY_Z = 2.5;
 
+// ── TRAINED MODEL WEIGHTS (from train_and_export.py — R²=0.9998) ────
+const TRAINED_COEFFS: Record<string, number> = {
+    ro_reject_tds: 0.001136,
+    rainwater_tds: 0.001006,
+    blend_ratio_ro: 0.561677,
+    blended_level: 0.002506,
+    blended_flow: 0.037797,
+    tds_change_rate: 60.170804,
+    blended_tds_lag1: 0.96059,
+    blended_tds_lag2: -0.039485,
+    blended_tds_lag3: -0.039613,
+    blended_tds_lag4: -0.039458,
+    blended_tds_lag5: -0.039314,
+    blended_tds_lag6: -0.00801,
+    blended_tds_lag7: -0.007946,
+    blended_tds_lag8: -0.007728,
+    blended_tds_lag9: -0.007676,
+    blended_tds_lag10: -0.008142,
+    tds_roll_mean_5: 0.160544,
+    tds_roll_std_5: -0.00062,
+    tds_roll_max_5: -0.000058,
+    tds_roll_min_5: -0.000809,
+    tds_roll_mean_10: 0.076322,
+    tds_roll_std_10: -0.001769,
+    tds_roll_max_10: 0.000631,
+    tds_roll_min_10: 0.000051,
+    hour_sin: -0.100875,
+    hour_cos: 0.127389,
+    tds_delta1: 1.00004,
+    tds_accel: -0.000035,
+};
+const TRAINED_INTERCEPT = -1.601128;
+const TRAINED_R2 = 0.9998;
+
+// ── Trained model predictor ─────────────────────────────────────────
+function trainedModelPredict(
+    tdsHistory: number[],
+    roTDS: number,
+    rainTDS: number,
+    blendRo: number,
+    blendedLevel: number,
+    blendedFlow: number,
+    tdsChangeRate: number,
+    hourOfDay: number,
+): number | null {
+    if (tdsHistory.length < 11) return null; // need at least 11 points for lag10
+
+    const n = tdsHistory.length;
+    const current = tdsHistory[n - 1];
+
+    // Lag features (lag1 = previous reading, lag10 = 10 readings ago)
+    const lags: number[] = [];
+    for (let i = 1; i <= 10; i++) {
+        lags.push(tdsHistory[n - 1 - i]);
+    }
+
+    // Rolling stats from lag1 onward (shift(1) in pandas = exclude current)
+    const shifted = tdsHistory.slice(0, n - 1); // all except current
+    const roll5 = shifted.slice(-5);
+    const roll10 = shifted.slice(-10);
+
+    const mean = (arr: number[]) => arr.reduce((a, b) => a + b, 0) / arr.length;
+    const std = (arr: number[], m: number) =>
+        Math.sqrt(arr.reduce((s, v) => s + (v - m) ** 2, 0) / arr.length);
+
+    const m5 = mean(roll5), m10 = mean(roll10);
+    const s5 = std(roll5, m5), s10 = std(roll10, m10);
+
+    // Delta & acceleration
+    const delta1 = current - lags[0];
+    const accel = delta1 - (lags[0] - lags[1]);
+
+    // Hour sin/cos
+    const hSin = Math.sin(2 * Math.PI * hourOfDay / 24);
+    const hCos = Math.cos(2 * Math.PI * hourOfDay / 24);
+
+    // Build feature vector
+    const features: Record<string, number> = {
+        ro_reject_tds: roTDS,
+        rainwater_tds: rainTDS,
+        blend_ratio_ro: blendRo,
+        blended_level: blendedLevel,
+        blended_flow: blendedFlow,
+        tds_change_rate: tdsChangeRate,
+    };
+    for (let i = 0; i < 10; i++) features[`blended_tds_lag${i + 1}`] = lags[i];
+    features.tds_roll_mean_5 = m5;
+    features.tds_roll_std_5 = s5;
+    features.tds_roll_max_5 = Math.max(...roll5);
+    features.tds_roll_min_5 = Math.min(...roll5);
+    features.tds_roll_mean_10 = m10;
+    features.tds_roll_std_10 = s10;
+    features.tds_roll_max_10 = Math.max(...roll10);
+    features.tds_roll_min_10 = Math.min(...roll10);
+    features.hour_sin = hSin;
+    features.hour_cos = hCos;
+    features.tds_delta1 = delta1;
+    features.tds_accel = accel;
+
+    // Dot product
+    let prediction = TRAINED_INTERCEPT;
+    for (const [feat, coeff] of Object.entries(TRAINED_COEFFS)) {
+        prediction += coeff * (features[feat] ?? 0);
+    }
+    return Math.max(0, prediction);
+}
+
 class LinearRegression {
     slope = 0; intercept = 0; r2 = 0;
     fit(x: number[], y: number[]): boolean {
@@ -207,16 +314,17 @@ serve(async (req) => {
         const profile = detectUseCase(currentTDS);
         const { name: useCase, targetTDS, tolerance, maxTDS } = profile;
 
-        // Fetch blended TDS history
+        // Fetch blended TDS history (expanded for trained model features)
         const { data: history } = await supabase
             .from("sensor_readings")
-            .select("tds, timestamp")
+            .select("tds, timestamp, flow_rate, level")
             .eq("tank_type", "blended")
             .order("timestamp", { ascending: true })
             .limit(HISTORY_LIMIT);
 
         let pred = currentTDS, ltPred = currentTDS;
         let trend = "stable", conf = 0.3, rate = 0, r2l = 0, r2p = 0;
+        let trainedPred: number | null = null;
 
         if (history && history.length >= MIN_HISTORY) {
             const tv = history.map((h: any) => parseFloat(h.tds));
@@ -228,14 +336,31 @@ serve(async (req) => {
             const poly = new PolynomialRegression(); poly.fit(xv, tv); r2p = poly.r2;
             const kalman = new KalmanFilter(); for (const v of tv) kalman.update(v);
 
-            // Short-term: 60s ahead
-            pred = Math.max(0, ensemble([
+            // Compute blend ratio for trained model
+            const blendForModel = calcBlend(targetTDS, roTDS, rainTDS, tolerance);
+            const avgFlow = history!.reduce((s: number, h: any) => s + parseFloat(h.flow_rate ?? 0), 0) / history!.length;
+            const avgLevel = history!.reduce((s: number, h: any) => s + parseFloat(h.level ?? 0), 0) / history!.length;
+            const hourNow = new Date().getHours();
+
+            // Trained model prediction (60s ahead)
+            trainedPred = trainedModelPredict(
+                tv, roTDS, rainTDS, blendForModel.ro,
+                avgLevel || currentLvl, avgFlow || 2.5,
+                lr.slope, hourNow
+            );
+
+            // Short-term: 60s ahead (trained model gets highest weight)
+            const shortTermPreds: { value: number; weight: number }[] = [
                 { value: lr.predict(lx + 60), weight: Math.max(0.1, lr.r2) },
                 { value: poly.predict(lx + 60), weight: Math.max(0.1, poly.r2) },
                 { value: kalman.getEstimate(), weight: 0.6 },
                 { value: wma(tv, 10), weight: 0.4 },
                 { value: arima(tv, 12), weight: 0.5 },
-            ]));
+            ];
+            if (trainedPred !== null) {
+                shortTermPreds.push({ value: trainedPred, weight: 2.0 });
+            }
+            pred = Math.max(0, ensemble(shortTermPreds));
 
             // Long-term: 1hr ahead
             ltPred = Math.max(0, ensemble([
@@ -311,9 +436,11 @@ serve(async (req) => {
                             : `✅ Water suitable for ${useCase} (TDS ${currentTDS} ppm)`,
                 },
                 modelHealth: {
-                    ensemble: "LinearRegression + Polynomial + Kalman + WMA + ARIMA",
+                    ensemble: "TrainedLR + LinearRegression + Polynomial + Kalman + WMA + ARIMA",
                     r2Linear: Math.round(r2l * 1000) / 1000,
                     r2Polynomial: Math.round(r2p * 1000) / 1000,
+                    trainedModelR2: TRAINED_R2,
+                    trainedModelActive: trainedPred !== null,
                     datapointsUsed: history?.length ?? 0,
                     modelReady: (history?.length ?? 0) >= MIN_HISTORY,
                 },
