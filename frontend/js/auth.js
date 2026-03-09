@@ -91,6 +91,21 @@ const Auth = {
         if (error) console.warn('Profile upsert warning:', error.message);
     },
 
+    // Update profile stats in Supabase
+    async updateProfile(updates) {
+        if (!this.user) return { error: new Error('Not logged in') };
+        const { error } = await this.supabase
+            .from('profiles')
+            .update(updates)
+            .eq('id', this.user.id);
+
+        if (!error && this.profile) {
+            this.profile = { ...this.profile, ...updates };
+            this.updateUI();
+        }
+        return { error };
+    },
+
     // Load profile stats from Supabase
     async loadProfile() {
         if (!this.user) return;
