@@ -95,7 +95,11 @@ jobs:
           resourceGroup: ${{ env.RESOURCE_GROUP }}
           imageToDeploy: ${{ secrets.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
           environmentVariables: |
-            SUPABASE_URL=${{ secrets.SUPABASE_URL }}
-            SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
-            SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
             PORT=8080
+            SUPABASE_URL=secretref:supabase-url
+            SUPABASE_ANON_KEY=secretref:supabase-anon-key
+            SUPABASE_SERVICE_ROLE_KEY=secretref:supabase-service-role-key
+          secretVariables: |
+            supabase-url=${{ secrets.SUPABASE_URL }}
+            supabase-anon-key=${{ secrets.SUPABASE_ANON_KEY }}
+            supabase-service-role-key=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
