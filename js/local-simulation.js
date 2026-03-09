@@ -70,8 +70,8 @@ const API = {
                     });
 
                     if (filtered.length > 0) {
-                        // Limit to the last 200 valid readings
-                        this.dbHistory = filtered.slice(0, 200);
+                        // Limit to the last 400 valid readings
+                        this.dbHistory = filtered.slice(0, 400);
                         this.dbHistoryIndex = this.dbHistory.length - 1; // start from oldest
                         console.log(`Initialized DB Replay with ${this.dbHistory.length} continuous steps`);
                     }
