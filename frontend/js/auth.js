@@ -44,6 +44,8 @@ const Auth = {
         if (!this.isAuthenticated) {
             this.openModal();
             const mainContent = document.querySelector('.main-content');
+            const mainNav = document.getElementById('main-nav');
+            if (mainNav) mainNav.style.display = 'none';
             if (mainContent) mainContent.style.display = 'none';
         }
     },
@@ -70,6 +72,8 @@ const Auth = {
         }
 
         const mainContent = document.querySelector('.main-content');
+        const mainNav = document.getElementById('main-nav');
+        if (mainNav) mainNav.style.display = 'flex';
         if (mainContent) mainContent.style.display = 'block';
 
         this.closeModal();
@@ -93,6 +97,8 @@ const Auth = {
         if (walletEl) walletEl.textContent = '0';
 
         const mainContent = document.querySelector('.main-content');
+        const mainNav = document.getElementById('main-nav');
+        if (mainNav) mainNav.style.display = 'none';
         if (mainContent) mainContent.style.display = 'none';
 
         if (window.Dashboard) window.Dashboard.stop();
@@ -160,7 +166,6 @@ const Auth = {
     // ── Event Listeners ───────────────────────
     setupEventListeners() {
         const authBtn = document.getElementById('auth-btn');
-        const modalClose = document.getElementById('modal-close');
         const authModal = document.getElementById('auth-modal');
         const authForm = document.getElementById('auth-form');
         const authToggle = document.getElementById('auth-toggle-link');
@@ -168,8 +173,7 @@ const Auth = {
         const forgotLink = document.querySelector('.forgot-link');
 
         authBtn?.addEventListener('click', () => this.isAuthenticated ? this.logout() : this.openModal());
-        modalClose?.addEventListener('click', () => this.closeModal());
-        authModal?.addEventListener('click', (e) => { if (e.target === authModal) this.closeModal(); });
+        authModal?.addEventListener('click', (e) => { if (e.target === authModal && this.isAuthenticated) this.closeModal(); });
         authForm?.addEventListener('submit', (e) => this.handleSubmit(e));
         authToggle?.addEventListener('click', (e) => { e.preventDefault(); this.toggleAuthMode(); });
         googleBtn?.addEventListener('click', () => this.loginWithGoogle());

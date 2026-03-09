@@ -187,17 +187,33 @@ serve(async (req) => {
             if (paymentResult.success) {
                 const { data: profile } = await supabaseClient
                     .from("profiles")
-                    .select("wallet_balance")
+                    .select("wallet_balance, points")
                     .eq("id", payload.userId)
                     .single();
 
                 if (profile) {
-                    const newBalance = parseFloat(profile.wallet_balance || 0) + credits;
+                    let newBalance = parseFloat(profile.wallet_balance || 0);
+                    let newPoints = parseInt(profile.points || 0);
+
+                    if (payload.type === "credit_purchase") {
+                        newBalance += credits;
+                    } else if (payload.type === "feature_unlock") {
+                        newBalance -= amount;
+                    } else if (payload.type === "donation") {
+                        newBalance -= amount;
+                        newPoints += credits; // bonus points
+                    }
+
                     returnedNewBalance = newBalance;
+
+                    const updatePayload: any = { wallet_balance: newBalance };
+                    if (payload.type === "donation") {
+                        updatePayload.points = newPoints;
+                    }
 
                     await supabaseClient
                         .from("profiles")
-                        .update({ wallet_balance: newBalance })
+                        .update(updatePayload)
                         .eq("id", payload.userId);
 
                     // Unlock feature if applicable
@@ -219,9 +235,8 @@ serve(async (req) => {
                     success: true,
                     newBalance: returnedNewBalance,
                     transaction: {
-                        id: transaction.id,
+                        ...transaction,
                         status: finalStatus,
-                        amount,
                         credits: paymentResult.success ? credits : 0,
                         transactionId: paymentResult.transactionId,
                     },
@@ -237,7 +252,7 @@ serve(async (req) => {
     } catch (error) {
         console.error("Error in payment-simulation function:", error);
         return new Response(
-            JSON.stringify({ error: "Internal server error", message: error.message }),
+            JSON.stringify({ error: "Internal server error", message: error instanceof Error ? error.message : String(error) }),
             { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
     }

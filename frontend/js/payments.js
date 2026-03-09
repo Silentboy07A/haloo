@@ -127,22 +127,18 @@ const Payments = {
             }
 
             if (success) {
-                // Get current balance from UI or Profile
-                let currentBalance = Auth.profile?.wallet_balance;
-                if (currentBalance === undefined) {
-                    const uiBalanceText = document.getElementById('wallet-balance')?.textContent || '0';
-                    currentBalance = parseInt(uiBalanceText.replace(/,/g, '')) || 0;
+                if (window.EdgeAPI) {
+                    await Auth.loadProfile();
+                } else {
+                    const currentBalance = Number(Auth.profile?.wallet_balance) || 0;
+                    const addedCredits = Number(pkg.credits) || 0;
+                    const newBalance = currentBalance + addedCredits;
+                    if (typeof Auth.updateProfile === 'function') {
+                        Auth.updateProfile({ wallet_balance: newBalance });
+                    }
                 }
 
-                // Ensure values are numbers
-                currentBalance = Number(currentBalance) || 0;
-                const addedCredits = Number(transaction?.credits || pkg.credits) || 0;
-                const newBalance = currentBalance + addedCredits;
-
-                if (Auth.profile && typeof Auth.updateProfile === 'function') {
-                    Auth.updateProfile({ wallet_balance: newBalance });
-                }
-                this.updateBalanceDisplay(newBalance);
+                this.updateBalanceDisplay(Auth.profile?.wallet_balance || 0);
 
                 this.transactions.unshift(transaction || {
                     type: 'credit_purchase',
@@ -154,7 +150,7 @@ const Payments = {
                 });
 
                 this.renderHistory();
-                Toast.show(`${addedCredits} credits added!`, 'success');
+                Toast.show(`${pkg.credits} credits added!`, 'success');
             } else {
                 Toast.show('Payment failed. Please try again.', 'error');
             }
@@ -192,11 +188,16 @@ const Payments = {
             }
 
             if (success) {
-                const newBalance = balance - feat.price;
-                if (typeof Auth.updateProfile === 'function') {
-                    Auth.updateProfile({ wallet_balance: newBalance });
+                if (window.EdgeAPI) {
+                    await Auth.loadProfile();
+                } else {
+                    const newBalance = balance - feat.price;
+                    if (typeof Auth.updateProfile === 'function') {
+                        Auth.updateProfile({ wallet_balance: newBalance });
+                    }
                 }
-                this.updateBalanceDisplay(newBalance);
+
+                this.updateBalanceDisplay(Auth.profile?.wallet_balance || 0);
                 this.unlockedFeatures.push(featureId);
 
                 const card = document.querySelector(`[data-feature="${featureId}"]`);
@@ -251,16 +252,19 @@ const Payments = {
             }
 
             if (success) {
-                const newBalance = balance - amount;
-
-                if (typeof Auth.updateProfile === 'function') {
-                    Auth.updateProfile({
-                        wallet_balance: newBalance,
-                        points: (Auth.profile?.points || 0) + bonusPoints
-                    });
+                if (window.EdgeAPI) {
+                    await Auth.loadProfile();
+                } else {
+                    const newBalance = balance - amount;
+                    if (typeof Auth.updateProfile === 'function') {
+                        Auth.updateProfile({
+                            wallet_balance: newBalance,
+                            points: (Auth.profile?.points || 0) + bonusPoints
+                        });
+                    }
                 }
 
-                this.updateBalanceDisplay(newBalance);
+                this.updateBalanceDisplay(Auth.profile?.wallet_balance || 0);
                 Gamification.updateUI();
                 Auth.updateUI();
 

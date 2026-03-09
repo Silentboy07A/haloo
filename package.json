@@ -10,7 +10,7 @@
     "build": "node scripts/train-model.js",
     "simulate": "node simulation/sensors.js",
     "simulate:test": "node simulation/sensors.js --test",
-    "test:api": "node test/api-tests.js"
+    "test:api": "echo 'No local API tests configured. Edge functions are deployed to Supabase.'"
   },
   "keywords": [
     "water-management",
