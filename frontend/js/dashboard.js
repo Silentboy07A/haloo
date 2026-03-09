@@ -10,6 +10,7 @@ const Dashboard = {
     intervalId: null,
     blendRatio: { ro: 0.3, rain: 0.7 },
     lastPrediction: null,
+    lastSimIngestTime: 0, // Track when we last pushed simulation data to avoid loops
 
     // Statistics
     stats: {
@@ -165,11 +166,16 @@ const Dashboard = {
                     const latestTs = new Date(dbData.readings.blended.timestamp || 0).getTime();
                     const now = Date.now();
 
-                    if (now - latestTs < 30000) {
+                    // DO NOT use live DB data if it's identical to the timestamp we just pushed 1 second ago
+                    // This prevents the dashboard from thinking its own "Live" simulation replay is real Wokwi data
+                    if (now - latestTs < 30000 && Math.abs(latestTs - this.lastSimIngestTime) > 3000) {
                         tanks = dbData.readings;
                         console.log('Dashboard: Using live DB data source', tanks);
                         this._setDataSource('db');
                         this.updatePredictions(tanks, this.blendRatio);
+                    } else if (Math.abs(latestTs - this.lastSimIngestTime) <= 3000) {
+                        // Doing nothing lets it fall through to Simulation block
+                        // (Without printing "DB data is too old" which would be confusing)
                     } else {
                         console.log('Dashboard: DB data is too old', (now - latestTs) / 1000, 's');
                     }
@@ -188,8 +194,10 @@ const Dashboard = {
                     // Trigger predictions (EdgeAPI.predict handles the demo/real logic)
                     this.updatePredictions(tanks, this.blendRatio);
 
-                    // Push simulation data back to DB for demo users so history works
-                    if (isDemo && window.EdgeAPI) {
+                    // Push simulation data back to DB so history/ML works.
+                    // Doing this for all users ensures ML gets a continuous 200-frame stream
+                    if (window.EdgeAPI) {
+                        this.lastSimIngestTime = new Date(tanks.blended?.timestamp || Date.now()).getTime();
                         EdgeAPI.ingestSensorData(tanks, this.blendRatio).catch(e => { });
                     }
                 }

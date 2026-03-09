@@ -36,7 +36,7 @@ function calcSuitability(tds: number) {
 //  ML MODELS
 // ─────────────────────────────────────────────
 const MIN_HISTORY = 5;
-const HISTORY_LIMIT = 100;
+const HISTORY_LIMIT = 200;
 const TREND_THRESH = 0.5;
 const ANOMALY_Z = 2.5;
 

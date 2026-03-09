@@ -43,17 +43,10 @@ const API = {
                 if (response.ok) {
                     const data = await response.json();
 
-                    const now = new Date();
-                    const twentyFourHoursAgo = now.getTime() - (24 * 60 * 60 * 1000);
-
                     // Group rows by timestamp so we get all 3 tanks per step
                     const grouped = {};
                     data.forEach(r => {
                         const ts = r.timestamp;
-                        const rowDate = new Date(ts);
-
-                        // Only process recent data (last 24 hours)
-                        if (rowDate.getTime() < twentyFourHoursAgo) return;
 
                         if (!grouped[ts]) grouped[ts] = {};
                         grouped[ts][r.tank_type] = {
@@ -77,10 +70,10 @@ const API = {
                     });
 
                     if (filtered.length > 0) {
-                        // Sort by timestamp (already likely sorted, but to be sure)
-                        this.dbHistory = filtered;
+                        // Limit to the last 200 valid readings
+                        this.dbHistory = filtered.slice(0, 200);
                         this.dbHistoryIndex = this.dbHistory.length - 1; // start from oldest
-                        console.log(`Initialized DB Replay with ${this.dbHistory.length} steps`);
+                        console.log(`Initialized DB Replay with ${this.dbHistory.length} continuous steps`);
                     }
                 }
             } catch (e) {
@@ -98,10 +91,16 @@ const API = {
                 this.dbHistoryIndex = this.dbHistory.length - 1; // loop back to oldest
             }
 
+            // Re-write timestamps so they look "live"
+            const nowIso = new Date().toISOString();
+            if (tanks.ro_reject) tanks.ro_reject.timestamp = nowIso;
+            if (tanks.rainwater) tanks.rainwater.timestamp = nowIso;
+            if (tanks.blended) tanks.blended.timestamp = nowIso;
+
             return {
                 success: true,
                 timestep: this.timestep++,
-                timestamp: new Date().toISOString(),
+                timestamp: nowIso,
                 tanks: tanks,
                 blendRatio: this.simulation ? this.simulation.blendRatio : { ro: 0.3, rain: 0.7 }
             };
