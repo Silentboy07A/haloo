@@ -6,7 +6,65 @@ A smart water management system that blends RO reject water with rainwater to ac
 
 ![Dashboard Preview](frontend/assets/dashboard-preview.png)
 
-## 🌟 Features
+## �️ System Architecture
+
+```mermaid
+graph TD
+    %% Define styles
+    classDef frontend fill:#1e293b,stroke:#3b82f6,stroke-width:2px,color:#fff
+    classDef edge fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff
+    classDef db fill:#22c55e,stroke:#166534,stroke-width:2px,color:#fff
+    classDef iot fill:#64748b,stroke:#334155,stroke-width:2px,color:#fff
+    classDef external fill:#ef4444,stroke:#991b1b,stroke-width:2px,color:#fff
+
+    %% Nodes
+    subgraph Client ["Client Layer"]
+        UI[Frontend Dashboard]:::frontend
+        SimFallback[Browser Simulation Fallback]:::frontend
+    end
+    
+    subgraph Supabase ["Supabase Ecosystem"]
+        DB[(PostgreSQL Database)]:::db
+        Auth[Supabase Auth]:::external
+        
+        subgraph Edge_Functions ["Edge Functions (Deno)"]
+            Ingest[sensor-ingest]:::edge
+            ML[ml-predict]:::edge
+            Game[gamification]:::edge
+            Alert[alert-check]:::edge
+            Payment[payment-simulation]:::edge
+        end
+    end
+    
+    subgraph Hardware ["Hardware Layer"]
+        Wokwi[Wokwi IoT Simulator (ESP32)]:::iot
+    end
+    
+    %% Flows
+    Wokwi -- "Live Sensor Data" --> Ingest
+    
+    UI -- "Fetches Data & Auth" --> DB
+    UI -- "Login/Logout" --> Auth
+    UI -- "Transactions" --> Payment
+    
+    %% Ingest Fan-out
+    Ingest -- "Trigger" --> ML
+    Ingest -- "Trigger" --> Game
+    Ingest -- "Trigger" --> Alert
+    Ingest -- "Writes Data" --> DB
+    
+    %% Fallback Logic
+    SimFallback -- "Pushes Synthetic Data" -.-> Ingest
+    UI -. "Reads if Wokwi is offline" .-> SimFallback
+    
+    %% Styling
+    style Client fill:transparent,stroke:#3b82f6,stroke-width:2px,stroke-dasharray: 5 5
+    style Supabase fill:transparent,stroke:#22c55e,stroke-width:2px,stroke-dasharray: 5 5
+    style Edge_Functions fill:transparent,stroke:#f59e0b,stroke-width:2px
+    style Hardware fill:transparent,stroke:#64748b,stroke-width:2px,stroke-dasharray: 5 5
+```
+
+## �🌟 Features
 
 ### Real-Time Live Sync
 - **3 Tank System**: RO Reject, Rainwater, and Blended tanks
