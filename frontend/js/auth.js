@@ -91,17 +91,22 @@ const Auth = {
         this.user = null;
         this.profile = null;
         this.isAuthenticated = false;
-        if (window.EdgeAPI) EdgeAPI.logout();
-        // Reset wallet display
-        const walletEl = document.getElementById('wallet-balance');
-        if (walletEl) walletEl.textContent = '0';
+
+        try { if (window.EdgeAPI) EdgeAPI.logout(); } catch (e) { console.warn(e); }
+
+        try {
+            // Reset wallet display
+            const walletEl = document.getElementById('wallet-balance');
+            if (walletEl) walletEl.textContent = '0';
+        } catch (e) { }
 
         const mainContent = document.querySelector('.main-content');
         const mainNav = document.getElementById('main-nav');
         if (mainNav) mainNav.style.display = 'none';
         if (mainContent) mainContent.style.display = 'none';
 
-        if (window.Dashboard) window.Dashboard.stop();
+        try { if (window.Dashboard) window.Dashboard.stop(); } catch (e) { }
+
         this.openModal();
         this.updateUI();
     },
@@ -172,7 +177,9 @@ const Auth = {
         const googleBtn = document.getElementById('google-login');
         const forgotLink = document.querySelector('.forgot-link');
 
-        authBtn?.addEventListener('click', () => this.isAuthenticated ? this.logout() : this.openModal());
+        // 'authBtn' click behavior is dynamically assigned in 'updateUI()'
+        // so we don't bind it here to avoid duplication triggering double signOuts.
+
         authModal?.addEventListener('click', (e) => { if (e.target === authModal && this.isAuthenticated) this.closeModal(); });
         authForm?.addEventListener('submit', (e) => this.handleSubmit(e));
         authToggle?.addEventListener('click', (e) => { e.preventDefault(); this.toggleAuthMode(); });
@@ -298,11 +305,16 @@ const Auth = {
     },
 
     async logout() {
-        const { error } = await this.supabase.auth.signOut();
-        if (error) {
-            Toast.show('Logout failed: ' + error.message, 'error');
-        } else {
+        try {
+            const { error } = await this.supabase.auth.signOut();
+            if (error) throw error;
             Toast.show('Logged out successfully', 'info');
+        } catch (err) {
+            console.error('Logout error:', err.message);
+            // If the server network request fails, forcefully log out locally
+            // to prevent getting stuck in a ghost-logged-in UI state.
+            this._onSignedOut();
+            Toast.show('Forced local logout', 'info');
         }
     },
 

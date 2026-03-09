@@ -163,8 +163,21 @@ const Dashboard = {
             }
 
             if (!tanks) {
-                this.updateStatus('Waiting for DB...');
-                return;
+                // Fallback to local simulation if DB read returns no fresh data
+                const simData = await API.getSimulationData();
+                if (simData && simData.success) {
+                    tanks = simData.tanks;
+                    this._setDataSource('simulation');
+                    this.updatePredictions(tanks, this.blendRatio);
+
+                    // Push the synthesized readings back to DB so history/ML works
+                    if (window.EdgeAPI && EdgeAPI.userId && !EdgeAPI.userId.startsWith('demo')) {
+                        EdgeAPI.ingestSensorData(tanks, this.blendRatio).catch(e => console.warn("Sim ingest failed:", e.message));
+                    }
+                } else {
+                    this.updateStatus('Waiting for Data...');
+                    return;
+                }
             }
 
             this.updateTanks(tanks);

@@ -39,8 +39,8 @@ BATCH_SIZE  = 200        # rows per upsert call (Supabase limit ~500)
 supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 df = pd.read_csv(CSV_FILE)
 
-print(f"📂  Loaded {len(df)} rows from {CSV_FILE}")
-print(f"🔗  Connecting to Supabase: {SUPABASE_URL}")
+print(f"Loaded {len(df)} rows from {CSV_FILE}")
+print(f"Connecting to Supabase: {SUPABASE_URL}")
 
 def make_readings(row):
     """Turn one CSV row into 3 sensor_readings records."""
@@ -81,7 +81,7 @@ records = []
 for _, row in df.iterrows():
     records.extend(make_readings(row))
 
-print(f"📊  Total records to insert: {len(records)} ({len(df)} rows × 3 tanks)")
+print(f"Total records to insert: {len(records)} ({len(df)} rows * 3 tanks)")
 
 # Upload in batches
 total_batches = (len(records) + BATCH_SIZE - 1) // BATCH_SIZE
@@ -90,10 +90,10 @@ for i in range(0, len(records), BATCH_SIZE):
     batch_num = i // BATCH_SIZE + 1
     try:
         supabase.table("sensor_readings").insert(batch).execute()
-        print(f"  ✅  Batch {batch_num}/{total_batches} — inserted {len(batch)} records")
+        print(f"  OK  Batch {batch_num}/{total_batches} - inserted {len(batch)} records")
     except Exception as e:
-        print(f"  ❌  Batch {batch_num} failed: {e}")
+        print(f"  ERR  Batch {batch_num} failed: {e}")
     time.sleep(0.1)   # be gentle on the API
 
-print("\n🎉  Done! The ml-predict Edge Function will now train on historical data.")
-print("     Open the SaveHydroo dashboard → the ML confidence score should rise above 0.8.")
+print("\nDone! The ml-predict Edge Function will now train on historical data.")
+print("     Open the SaveHydroo dashboard -> the ML confidence score should rise above 0.8.")
