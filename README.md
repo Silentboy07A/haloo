@@ -102,22 +102,16 @@ savehydroo/
 │   ├── index.html       # Main HTML
 │   ├── css/styles.css   # Styling
 │   └── js/              # JavaScript modules
-├── api/                 # Vercel serverless functions
-│   ├── sensor-data.js
-│   ├── predictions.js
-│   ├── gamification.js
-│   ├── payments.js
-│   └── simulation.js
 ├── lib/                 # Shared libraries
 │   ├── constants.js
 │   ├── supabase.js
 │   └── ml-predictor.js
 ├── supabase/
+│   ├── functions/       # Edge Functions (ml-predict, gamification, etc.)
 │   └── schema.sql       # Database schema
 ├── data/
 │   └── sample-data.json
 ├── package.json
-├── vercel.json
 └── README.md
 ```
 
@@ -159,19 +153,17 @@ Once these secrets are active, simply push your code to the `main` branch or man
 
 1. Create a new Supabase project
 2. Run `supabase/schema.sql` in the SQL Editor to generate the tables
-3. Deploy the Edge Functions: `supabase functions deploy ml-predict`
+3. Deploy the Edge Functions: `supabase functions deploy [function-name]`
 
-## 📊 API Endpoints
+## 📊 Edge Function Endpoints
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/simulation/step` | GET | Get next simulation reading |
-| `/api/simulation/reset` | POST | Reset simulation |
-| `/api/sensor-data` | GET/POST | Read/save sensor data |
-| `/api/predictions/calculate` | POST | Calculate ML predictions |
-| `/api/gamification/stats` | GET | User stats |
-| `/api/gamification/leaderboard` | GET | Global leaderboard |
-| `/api/payments/initiate` | POST | Start payment |
+| `/functions/v1/sensor-ingest` | POST | Accepts live Wokwi sensor data |
+| `/functions/v1/ml-predict` | POST | Calculate ML predictions with ensemble model |
+| `/functions/v1/gamification` | GET | Leaderboard, User stats, and Achievement evaluation |
+| `/functions/v1/payment-simulation` | POST | Virtual credit purchases and feature unlocks |
+| `/functions/v1/alert-check` | POST | Verifies real-time thresholds to send user alerts |
 
 ## 🎮 Gamification Points
 
