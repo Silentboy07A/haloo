@@ -150,37 +150,17 @@ const Dashboard = {
             let blendRatio = this.blendRatio;
             const isLoggedIn = window.EdgeAPI && EdgeAPI.userId && !EdgeAPI.userId.startsWith('demo');
 
-            // 1. Try DB first (real Wokwi data) when logged in
             if (isLoggedIn) {
-                try {
-                    const dbData = await EdgeAPI.getLatestReadings();
-                    if (dbData?.success && dbData.readings?.blended?.tds) {
-                        tanks = dbData.readings; // ro_reject, rainwater, blended from DB
-                        this._setDataSource('db');
-                    }
-                } catch (e) {
-                    console.warn('DB read failed, falling back to simulation:', e.message);
-                }
-            }
-
-            // 2. Fall back to local simulation if no DB data
-            if (!tanks) {
+                // Step 1: Generate fresh data from local simulation
                 const simData = await API.getSimulationData();
-                if (!simData?.tanks) return;
-                tanks = simData.tanks;
-                blendRatio = simData.blendRatio || blendRatio;
-                this._setDataSource('simulation');
-            }
+                const simTanks = simData?.tanks || null;
+                blendRatio = simData?.blendRatio || blendRatio;
 
-            this.updateTanks(tanks);
-            this.updateCharts(tanks);
-            this.updateLastUpdate();
-            this.updateStatus('Running');
-
-            // 3. Push to sensor-ingest (fan-out: ml-predict + alert-check + gamification)
-            if (isLoggedIn) {
+                // Step 2: Push simulation data + real Wokwi data to DB via sensor-ingest
+                //         sensor-ingest also runs: ml-predict, alert-check, gamification
                 try {
-                    const result = await EdgeAPI.ingestSensorData(tanks, blendRatio);
+                    const ingestPayload = simTanks || {};
+                    const result = await EdgeAPI.ingestSensorData(ingestPayload, blendRatio);
                     if (result?.success) {
                         if (result.prediction) this.displayPredictions(result);
                         if (result.alert) this._showAlerts(result.alert);
@@ -192,12 +172,41 @@ const Dashboard = {
                     }
                 } catch (e) {
                     console.warn('sensor-ingest failed, local prediction fallback:', e.message);
-                    this.updatePredictions(tanks, blendRatio);
+                    if (simTanks) this.updatePredictions(simTanks, blendRatio);
+                }
+
+                // Step 3: Read the latest data back from DB to display
+                try {
+                    const dbData = await EdgeAPI.getLatestReadings();
+                    if (dbData?.success && dbData.readings?.blended?.tds) {
+                        tanks = dbData.readings;
+                        this._setDataSource('db');
+                    }
+                } catch (e) {
+                    console.warn('DB read failed:', e.message);
+                }
+
+                // Fallback to sim data if DB read didn't return anything
+                if (!tanks && simTanks) {
+                    tanks = simTanks;
+                    this._setDataSource('simulation');
                 }
             } else {
+                // Not logged in: just use local simulation
+                const simData = await API.getSimulationData();
+                if (!simData?.tanks) return;
+                tanks = simData.tanks;
+                blendRatio = simData.blendRatio || blendRatio;
+                this._setDataSource('simulation');
                 this.updatePredictions(tanks, blendRatio);
             }
 
+            if (!tanks) return;
+
+            this.updateTanks(tanks);
+            this.updateCharts(tanks);
+            this.updateLastUpdate();
+            this.updateStatus('Running');
             this.updateStats(tanks);
         } catch (error) {
             console.error('Dashboard update error:', error);
