@@ -49,12 +49,18 @@ serve(async (req) => {
     }
 
     try {
-        const authHeader = req.headers.get("Authorization");
-        const supabaseClient = createClient(
-            Deno.env.get("SUPABASE_URL") ?? "",
-            Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-            { global: { headers: { Authorization: authHeader! } } }
-        );
+        const supabaseUrl = Deno.env.get("SUPABASE_URL");
+        const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+        if (!supabaseUrl || !serviceRoleKey) {
+            console.error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables.");
+            return new Response(JSON.stringify({
+                error: "Server configuration error. Missing database keys.",
+                details: { hasUrl: !!supabaseUrl, hasKey: !!serviceRoleKey }
+            }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+
+        const supabaseClient = createClient(supabaseUrl, serviceRoleKey);
 
         // GET: Fetch transaction history or packages
         if (req.method === "GET") {
