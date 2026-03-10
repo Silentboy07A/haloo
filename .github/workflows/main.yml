@@ -75,6 +75,11 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      - name: Enforce Single Revision Mode on Azure
+        run: |
+          az config set extension.use_dynamic_install=yes_without_prompt
+          az containerapp revision set-mode --name ${{ env.CONTAINER_APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --mode single
+
       - name: Deploy to Azure Container Apps
         uses: azure/container-apps-deploy-action@v1
         with:
