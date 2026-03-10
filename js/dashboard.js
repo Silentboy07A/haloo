@@ -147,8 +147,10 @@ const Dashboard = {
     // Main update loop
     async update() {
         try {
+            console.log("Dashboard update() start");
             let tanks = null;
             const isDemo = !window.EdgeAPI || !EdgeAPI.userId || EdgeAPI.userId.startsWith('demo');
+            console.log("Dashboard.update: User isDemo:", isDemo);
 
             // 1. Try to read the latest data from DB (Wokwi Live)
             // If logged in as a real user, we prefer their specific live stream.
