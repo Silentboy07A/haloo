@@ -22,7 +22,7 @@ import random
 import datetime
 
 # ── Config ────────────────────────────────────────────────────────────
-ROWS       = 10_000
+ROWS       = 20_000
 START_TIME = datetime.datetime(2025, 1, 1, 0, 0, 0)
 INTERVAL   = datetime.timedelta(minutes=2)   # one reading every 2 min
 OUT_FILE   = "training_data.csv"

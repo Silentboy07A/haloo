@@ -36,42 +36,42 @@ function calcSuitability(tds: number) {
 //  ML MODELS
 // ─────────────────────────────────────────────
 const MIN_HISTORY = 5;
-const HISTORY_LIMIT = 400;
+const HISTORY_LIMIT = 1000;
 const TREND_THRESH = 0.5;
 const ANOMALY_Z = 2.5;
 
 // ── TRAINED MODEL WEIGHTS (from train_and_export.py — R²=0.9998) ────
 const TRAINED_COEFFS: Record<string, number> = {
-    ro_reject_tds: 0.001136,
-    rainwater_tds: 0.001006,
-    blend_ratio_ro: 0.561677,
-    blended_level: 0.002506,
-    blended_flow: 0.037797,
-    tds_change_rate: 60.170804,
-    blended_tds_lag1: 0.96059,
-    blended_tds_lag2: -0.039485,
-    blended_tds_lag3: -0.039613,
-    blended_tds_lag4: -0.039458,
-    blended_tds_lag5: -0.039314,
-    blended_tds_lag6: -0.00801,
-    blended_tds_lag7: -0.007946,
-    blended_tds_lag8: -0.007728,
-    blended_tds_lag9: -0.007676,
-    blended_tds_lag10: -0.008142,
-    tds_roll_mean_5: 0.160544,
-    tds_roll_std_5: -0.00062,
-    tds_roll_max_5: -0.000058,
-    tds_roll_min_5: -0.000809,
-    tds_roll_mean_10: 0.076322,
-    tds_roll_std_10: -0.001769,
-    tds_roll_max_10: 0.000631,
-    tds_roll_min_10: 0.000051,
-    hour_sin: -0.100875,
-    hour_cos: 0.127389,
-    tds_delta1: 1.00004,
-    tds_accel: -0.000035,
+    ro_reject_tds: 0.000784,
+    rainwater_tds: 0.000955,
+    blend_ratio_ro: 0.325956,
+    blended_level: -0.00175,
+    blended_flow: -0.05011,
+    tds_change_rate: 60.263412,
+    blended_tds_lag1: 0.960117,
+    blended_tds_lag2: -0.039651,
+    blended_tds_lag3: -0.039782,
+    blended_tds_lag4: -0.039555,
+    blended_tds_lag5: -0.039648,
+    blended_tds_lag6: -0.007771,
+    blended_tds_lag7: -0.007802,
+    blended_tds_lag8: -0.007759,
+    blended_tds_lag9: -0.007696,
+    blended_tds_lag10: -0.007837,
+    tds_roll_mean_5: 0.160296,
+    tds_roll_std_5: -0.001928,
+    tds_roll_max_5: 0.000745,
+    tds_roll_min_5: -0.000602,
+    tds_roll_mean_10: 0.076262,
+    tds_roll_std_10: 0.000311,
+    tds_roll_max_10: -0.000039,
+    tds_roll_min_10: 0.000479,
+    hour_sin: -0.066562,
+    hour_cos: 0.087126,
+    tds_delta1: 0.999763,
+    tds_accel: -0.000004,
 };
-const TRAINED_INTERCEPT = -1.601128;
+const TRAINED_INTERCEPT = -0.448103;
 const TRAINED_R2 = 0.9998;
 
 // ── Trained model predictor ─────────────────────────────────────────

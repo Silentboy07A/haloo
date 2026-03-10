@@ -94,7 +94,7 @@ const EdgeAPI = {
     },
 
     // Get historical readings for charts directly from Supabase REST API
-    async getHistoricalReadings(limit = 400) {
+    async getHistoricalReadings(limit = 1000) {
         try {
             const url = `${SUPABASE_URL}/rest/v1/sensor_readings?select=*&limit=${limit}&order=timestamp.desc`;
 
