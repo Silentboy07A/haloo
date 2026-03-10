@@ -161,9 +161,20 @@ const Auth = {
         if (!error && data) {
             this.profile = data;
             this.updateUI();
-            // Sync wallet balance display
+
+            // Sync dependent UI state that requires an active profile 
             if (window.Payments) {
                 Payments.updateBalanceDisplay(data.wallet_balance || 0);
+                Payments.loadHistory();
+            }
+            if (window.Gamification) {
+                Gamification.loadAchievements();
+                Gamification.updateUI();
+            }
+            if (window.Dashboard && window.Dashboard.stats) {
+                Dashboard.stats.totalWaterSaved = data.total_water_saved || 0;
+                Dashboard.stats.totalRainwaterUsed = data.total_rainwater_used || 0;
+                Dashboard.updateStatsDisplay();
             }
         }
     },
