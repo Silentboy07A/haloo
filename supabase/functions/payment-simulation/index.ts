@@ -11,12 +11,12 @@ const corsHeaders = {
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Credit packages
+// Credit packages (Synced with frontend starter/pro/ultra)
 const CREDIT_PACKAGES = [
-    { id: "basic", name: "Basic Credits", amount: 10, credits: 100 },
-    { id: "standard", name: "Standard Credits", amount: 25, credits: 300 },
-    { id: "premium", name: "Premium Credits", amount: 50, credits: 750 },
-    { id: "ultimate", name: "Ultimate Credits", amount: 100, credits: 2000 },
+    { id: "starter", name: "Starter Pack", amount: 99, credits: 100 },
+    { id: "pro", name: "Pro Pack", amount: 399, credits: 500 },
+    { id: "ultra", name: "Ultra Pack", amount: 999, credits: 1500 },
+    { id: "basic", name: "Basic Credits", amount: 10, credits: 100 }, // Keep for backward compatibility
 ];
 
 // Feature unlocks
@@ -60,10 +60,22 @@ serve(async (req) => {
             }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
 
-        const supabaseClient = createClient(supabaseUrl, serviceRoleKey);
+        const supabaseClient = createClient(supabaseUrl, serviceRoleKey, {
+            db: { schema: 'public' }
+        });
 
-        // Use explicit schema in the client settings as a fallback attempt
-        // actually just adding public. to the table name is better in .from()
+        // --- DIAGNOSTIC: Check table visibility ---
+        const { data: tableCheck, error: checkError } = await supabaseClient
+            .from("sensor_readings")
+            .select("id")
+            .limit(1);
+
+        if (checkError) {
+            console.error("Diagnostic failed: Cannot see sensor_readings", checkError.message);
+        } else {
+            console.log("Diagnostic passed: Database connection active.");
+        }
+        // --- END DIAGNOSTIC ---
 
         // GET: Fetch transaction history or packages
         if (req.method === "GET") {
