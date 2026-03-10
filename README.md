@@ -6,7 +6,7 @@ A smart water management system that blends RO reject water with rainwater to ac
 
 ![Dashboard Preview](frontend/assets/dashboard-preview.png)
 
-## 🏗️ System Architecture
+##  System Architecture
 
 ```mermaid
 graph TD
@@ -187,7 +187,7 @@ Once these secrets are active, simply push your code to the `main` branch or man
 - **Authentication**: Supabase Auth (OAuth & Passwordless)
 - **IoT Simulator**: Wokwi (Arduino)
 
-## 🧪 Testing
+## Testing
 
 ```bash
 # API tests
