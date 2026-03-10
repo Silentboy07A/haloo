@@ -25,3 +25,10 @@ jobs:
 
       - name: Deploy ml-predict Function
         run: supabase functions deploy ml-predict --project-ref $SUPABASE_PROJECT_ID
+
+      - name: Force PostgREST schema cache reload
+        run: |
+          curl -s -X POST "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_ID/query" \
+          -H "Authorization: Bearer ${{ secrets.SUPABASE_ACCESS_TOKEN }}" \
+          -H "Content-Type: application/json" \
+          -d '{"query": "NOTIFY pgrst, reload schema;"}'
