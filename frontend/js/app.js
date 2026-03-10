@@ -44,7 +44,8 @@ function initTabs() {
 
             // Premium Feature Check
             const premiumId = link.dataset.premium;
-            if (premiumId && !Payments.unlockedFeatures.includes(premiumId)) {
+            // BYPASS: Allow advanced_analytics for now even if not unlocked
+            if (premiumId && !Payments.unlockedFeatures.includes(premiumId) && premiumId !== 'advanced_analytics') {
                 Toast.show(`Unlock ${premiumId.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')} in the Wallet to access this tab!`, 'warning');
                 return;
             }

@@ -154,10 +154,11 @@ const Payments = {
         }
 
         const balance = Auth.profile?.wallet_balance || 0;
-        if (balance < feat.price) {
-            Toast.show('Insufficient credits!', 'error');
-            return;
-        }
+        // Temporarily ignore the balance check so user can unlock with negative balance
+        // if (balance < feat.price) {
+        //     Toast.show('Insufficient credits!', 'error');
+        //     return;
+        // }
 
         try {
             if (!window.EdgeAPI) {
