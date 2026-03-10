@@ -9,10 +9,6 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
-
-// Simulation still runs locally (no edge function deployed for it)
-import { handler as simulationHandler } from './api/simulation.js';
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -99,9 +95,6 @@ app.all('/api/payments*', (req, res) => proxyToEdge('payment', req, res));
 // alerts       →  alert-check edge function
 app.all('/api/alerts*', (req, res) => proxyToEdge('alert-check', req, res));
 
-// simulation   →  local simulation handler (no edge function for this)
-app.all('/api/simulation*', (req, res) => simulationHandler(req, res));
-
 // ── Static Frontend ───────────────────────────
 const frontendPath = path.join(__dirname, 'frontend');
 app.use(express.static(frontendPath));
@@ -121,5 +114,4 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`                   /api/gamification → gamification`);
     console.log(`                   /api/payments     → payment`);
     console.log(`                   /api/alerts       → alert-check`);
-    console.log(`                   /api/simulation   → local handler`);
 });
