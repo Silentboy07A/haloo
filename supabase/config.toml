@@ -1,0 +1,29 @@
+# A string used to distinguish different Supabase projects on the same host. Defaults to the
+# working directory name when running `supabase init`.
+project_id = "savehydroo"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+
+[studio]
+enabled = true
+port = 54323
+
+[edge_runtime]
+enabled = true
+port = 54324
+
+[edge_runtime.inspector]
+port = 8083
+
+[edge_runtime.policy]
+# By default, local functions can connect to the local database, but not the outside world.
+# To allow external connections, change this to "all".
+allow_net = "all"
