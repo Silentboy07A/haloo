@@ -39,6 +39,11 @@ app.get('/health', (req, res) => {
     });
 });
 
+// Debug tool: definitively verify which container image is active on Azure
+app.get('/api/version', (req, res) => {
+    res.status(200).json({ version: '1.4' });
+});
+
 // ── Edge Function Proxy Helper ────────────────
 async function proxyToEdge(edgeFunction, req, res) {
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
