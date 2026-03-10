@@ -13,6 +13,7 @@ const Auth = {
 
     // ── Initialise ────────────────────────────
     async init() {
+        console.log("Auth init started. URL:", window.location.href);
         // Boot Supabase client (loaded from CDN in index.html)
         this.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
             auth: {
@@ -21,15 +22,18 @@ const Auth = {
                 detectSessionInUrl: true   // picks up OAuth redirect automatically
             }
         });
+        console.log("Supabase client created.");
 
         // Handle OAuth redirect — Supabase puts tokens in the URL hash
-        const { data: { session } } = await this.supabase.auth.getSession();
+        const { data: { session }, error: sessionError } = await this.supabase.auth.getSession();
+        console.log("Initial getSession result:", session ? "Session found" : "No session", sessionError ? `Error: ${sessionError.message}` : "");
         if (session) {
             await this._onSignedIn(session.user);
         }
 
         // Listen for auth state changes (login, logout, token refresh)
-        this.supabase.auth.onAuthStateChange(async (_event, session) => {
+        this.supabase.auth.onAuthStateChange(async (event, session) => {
+            console.log("Auth state changed:", event, session ? "Session exists" : "No session");
             if (session) {
                 await this._onSignedIn(session.user);
             } else {
