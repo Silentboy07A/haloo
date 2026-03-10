@@ -58,11 +58,13 @@ const Payments = {
 
             // Try loading unlocked features from DB
             try {
-                if (window.EdgeAPI && Auth.supabase) {
-                    const { data } = await Auth.supabase
+                if (window.EdgeAPI && Auth.supabase && Auth.user) {
+                    const { data, error } = await Auth.supabase
                         .from('user_features')
                         .select('feature_id')
                         .eq('user_id', Auth.user.id);
+
+                    if (error) throw error;
 
                     if (data) {
                         this.unlockedFeatures = data.map(f => f.feature_id);
