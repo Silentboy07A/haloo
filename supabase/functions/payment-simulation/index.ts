@@ -62,22 +62,25 @@ serve(async (req) => {
 
         const supabaseClient = createClient(supabaseUrl, serviceRoleKey);
 
+        // Use explicit schema in the client settings as a fallback attempt
+        // actually just adding public. to the table name is better in .from()
+
         // GET: Fetch transaction history or packages
         if (req.method === "GET") {
             const url = new URL(req.url);
-            const userId = url.searchParams.get("userId");
             const action = url.searchParams.get("action");
+            const userId = url.searchParams.get("userId");
 
             // Get available packages
             if (action === "packages") {
-                return new Response(
-                    JSON.stringify({
-                        success: true,
-                        packages: CREDIT_PACKAGES,
-                        features: FEATURES,
-                    }),
-                    { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-                );
+                return new Response(JSON.stringify({
+                    success: true,
+                    packages: [
+                        { id: "starter", name: "Starter Pack", credits: 100, price: 99 },
+                        { id: "pro", name: "Pro Pack", credits: 500, price: 399 },
+                        { id: "ultra", name: "Ultra Pack", credits: 1500, price: 999 },
+                    ],
+                }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
             }
 
             // Get transaction history
@@ -88,8 +91,9 @@ serve(async (req) => {
                 );
             }
 
-            const { data: transactions } = await supabaseClient
-                .from("transactions")
+            // I'll try with explicit public schema prefix to bypass cache issues
+            const { data: transactions, error: fetchError } = await supabaseClient
+                .from("public.transactions")
                 .select("*")
                 .eq("user_id", userId)
                 .order("created_at", { ascending: false })
@@ -161,7 +165,7 @@ serve(async (req) => {
 
             // Create initial transaction record
             const { data: transaction, error: txError } = await supabaseClient
-                .from("transactions")
+                .from("public.transactions")
                 .insert({
                     user_id: payload.userId,
                     type: payload.type,
