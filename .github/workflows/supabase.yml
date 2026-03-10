@@ -32,9 +32,9 @@ jobs:
 
       - name: Deploy Edge Functions
         run: |
-          supabase functions deploy ml-predict --project-ref $SUPABASE_PROJECT_ID --access-token ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          supabase functions deploy gamification --project-ref $SUPABASE_PROJECT_ID --access-token ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          supabase functions deploy payment-simulation --project-ref $SUPABASE_PROJECT_ID --access-token ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          supabase functions deploy ml-predict --project-ref $SUPABASE_PROJECT_ID
+          supabase functions deploy gamification --project-ref $SUPABASE_PROJECT_ID
+          supabase functions deploy payment-simulation --project-ref $SUPABASE_PROJECT_ID
 
       - name: Force PostgREST schema cache reload
         run: |
