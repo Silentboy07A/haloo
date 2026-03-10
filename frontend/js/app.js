@@ -42,6 +42,13 @@ function initTabs() {
             links.forEach(l => l.classList.remove('active'));
             tabs.forEach(t => t.classList.remove('active'));
 
+            // Premium Feature Check
+            const premiumId = link.dataset.premium;
+            if (premiumId && !Payments.unlockedFeatures.includes(premiumId)) {
+                Toast.show(`Unlock ${premiumId.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')} in the Wallet to access this tab!`, 'warning');
+                return;
+            }
+
             link.classList.add('active');
             document.getElementById(tabId)?.classList.add('active');
 

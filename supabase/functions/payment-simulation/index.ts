@@ -21,10 +21,9 @@ const CREDIT_PACKAGES = [
 
 // Feature unlocks
 const FEATURES = [
-    { id: "advanced_analytics", name: "Advanced Analytics", price: 500 },
-    { id: "export_data", name: "Export Historical Data", price: 300 },
-    { id: "custom_alerts", name: "Custom Alerts", price: 200 },
-    { id: "premium_support", name: "Premium Support", price: 1000 },
+    { id: "advanced_analytics", name: "Advanced Analytics", price: 200 },
+    { id: "predictions_pro", name: "Predictions Pro", price: 300 },
+    { id: "export_data", name: "Data Export", price: 150 },
 ];
 
 interface TransactionRequest {
