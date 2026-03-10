@@ -188,8 +188,14 @@ const Auth = {
         const googleBtn = document.getElementById('google-login');
         const forgotLink = document.querySelector('.forgot-link');
 
-        // 'authBtn' click behavior is dynamically assigned in 'updateUI()'
-        // so we don't bind it here to avoid duplication triggering double signOuts.
+        // 'authBtn' click behavior handles both login and logout
+        authBtn?.addEventListener('click', () => {
+            if (this.isAuthenticated) {
+                this.logout();
+            } else {
+                this.openModal();
+            }
+        });
 
         authModal?.addEventListener('click', (e) => { if (e.target === authModal && this.isAuthenticated) this.closeModal(); });
         authForm?.addEventListener('submit', (e) => this.handleSubmit(e));
