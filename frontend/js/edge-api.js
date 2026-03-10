@@ -48,6 +48,9 @@ const EdgeAPI = {
 
         if (this.authToken) {
             headers['Authorization'] = `Bearer ${this.authToken}`;
+        } else {
+            // Supabase API Gateway ALWAYS requires a Bearer token, even for anonymous requests
+            headers['Authorization'] = `Bearer ${this.apiKey}`;
         }
 
         const { signal, ...fetchOptions } = options;

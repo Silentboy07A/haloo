@@ -46,7 +46,8 @@ const API = {
                     // Group rows by timestamp so we get all 3 tanks per step
                     const grouped = {};
                     data.forEach(r => {
-                        const ts = r.timestamp;
+                        // Truncate to the minute (YYYY-MM-DDTHH:mm) to safely group asynchronous recordings
+                        const ts = r.timestamp.substring(0, 16);
 
                         if (!grouped[ts]) grouped[ts] = {};
                         grouped[ts][r.tank_type] = {
