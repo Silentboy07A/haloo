@@ -1,4 +1,4 @@
-# SaveHydroo 💧
+# SaveHydroo 
 
 **Smart Water Blending and Monitoring System**
 
@@ -68,7 +68,7 @@ graph TD
     style Hardware fill:transparent,stroke:#64748b,stroke-width:2px,stroke-dasharray: 5 5
 ```
 
-## �🌟 Features
+##  Features
 
 ### Real-Time Live Sync
 - **3 Tank System**: RO Reject, Rainwater, and Blended tanks
@@ -93,7 +93,7 @@ graph TD
 - **Donations**: Donate to causes and earn bonus points
 - **Transaction History**: Full payment tracking
 
-## 📁 Project Structure
+##  Project Structure
 
 ```
 savehydroo/
@@ -119,7 +119,7 @@ savehydroo/
 └── README.md
 ```
 
-## 🚀 Local Development
+##  Local Development
 
 ```bash
 # Install dependencies
@@ -132,7 +132,7 @@ npm run dev
 http://localhost:3000
 ```
 
-## ☁️ Azure Cloud Deployment (CI/CD)
+##  Azure Cloud Deployment (CI/CD)
 
 The application is configured to automatically build and deploy to **Azure Container Apps** every time you push to the `main` branch via GitHub Actions.
 
@@ -153,13 +153,13 @@ To enable automatic deployments, you must configure the following **7 Secrets** 
 
 Once these secrets are active, simply push your code to the `main` branch or manually trigger the `SaveHydroo CI/CD → Azure Container Apps` workflow in the **Actions** tab.
 
-## ⚙️ Supabase Setup
+##  Supabase Setup
 
 1. Create a new Supabase project
 2. Run `supabase/schema.sql` in the SQL Editor to generate the tables
 3. Deploy the Edge Functions: `supabase functions deploy [function-name]`
 
-## 📊 Edge Function Endpoints
+##  Edge Function Endpoints
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
@@ -169,7 +169,7 @@ Once these secrets are active, simply push your code to the `main` branch or man
 | `/functions/v1/payment-simulation` | POST | Virtual credit purchases and feature unlocks |
 | `/functions/v1/alert-check` | POST | Verifies real-time thresholds to send user alerts |
 
-## 🎮 Gamification Points
+##  Gamification Points
 
 | Action | Points |
 |--------|--------|
@@ -178,7 +178,7 @@ Once these secrets are active, simply push your code to the `main` branch or man
 | Maintain optimal TDS 1hr | +20 |
 | Daily login streak | +5 × days |
 
-## 🔧 Tech Stack
+## Tech Stack
 
 - **Frontend**: HTML, CSS, JavaScript, Chart.js
 - **Cloud Hosting**: Azure Container Apps (via GitHub Actions CI/CD)
@@ -197,10 +197,11 @@ npm run test:api
 npm run simulate:test
 ```
 
-## 📱 Screenshots
+##  Screenshots
 
 ### Dashboard
 - Real-time tank visualization
+- Simulated tank Visualization
 - Live TDS, temperature, flow metrics
 - Interactive blend controls
 
@@ -214,10 +215,10 @@ npm run simulate:test
 - Achievement badges
 - Global leaderboard
 
-## 📄 License
+##  License
 
 MIT License - feel free to use for learning and projects!
 
 ---
 
-Built with 💙 for water conservation
+Built with  for water conservation
