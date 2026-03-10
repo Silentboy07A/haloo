@@ -105,7 +105,7 @@ serve(async (req) => {
 
             // I'll try with explicit public schema prefix to bypass cache issues
             const { data: transactions, error: fetchError } = await supabaseClient
-                .from("public.transactions")
+                .from("transactions")
                 .select("*")
                 .eq("user_id", userId)
                 .order("created_at", { ascending: false })
@@ -177,7 +177,7 @@ serve(async (req) => {
 
             // Create initial transaction record
             const { data: transaction, error: txError } = await supabaseClient
-                .from("public.transactions")
+                .from("transactions")
                 .insert({
                     user_id: payload.userId,
                     type: payload.type,

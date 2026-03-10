@@ -109,6 +109,8 @@ const Auth = {
 
         this.openModal();
         this.updateUI();
+        // Force reload to completely clear all SPA state and active intervals
+        setTimeout(() => location.reload(), 1500);
     },
 
     // Create profile row if it doesn't exist yet
