@@ -41,25 +41,25 @@ graph TD
     end
     
     %% Flows
-    Wokwi -- "Live Sensor Data" --> Ingest
+    Wokwi -->|Live Sensor Data| Ingest
     
-    UI -- "Data sync, Auth & REST API" --> DB
-    UI -- "Login/Logout" --> Auth
+    UI -->|"Data sync, Auth & REST API"| DB
+    UI -->|Login/Logout| Auth
     
     %% API Interactions (Edge Functions)
-    UI -- "Predictions (EdgeAPI.predict)" --> ML
-    UI -- "Leaderboard (EdgeAPI)" --> Game
-    UI -- "Transactions & Features (EdgeAPI)" --> Payment
+    UI -->|Predictions| ML
+    UI -->|Leaderboard| Game
+    UI -->|Transactions & Features| Payment
     
     %% Ingest Fan-out
-    Ingest -- "Trigger" --> ML
-    Ingest -- "Trigger" --> Game
-    Ingest -- "Trigger" --> Alert
-    Ingest -- "Writes Data" --> DB
+    Ingest -->|Trigger| ML
+    Ingest -->|Trigger| Game
+    Ingest -->|Trigger| Alert
+    Ingest -->|Writes Data| DB
     
     %% Fallback Logic
-    SimFallback -- "Pushes Synthetic Data (EdgeAPI)" -.-> Ingest
-    UI -. "Reads Local Math Fallback" .-> SimFallback
+    SimFallback -.->|"Pushes Synthetic Data (EdgeAPI)"| Ingest
+    UI -.->|"Reads Local Math Fallback"| SimFallback
     
     %% Styling
     style Client fill:transparent,stroke:#3b82f6,stroke-width:2px,stroke-dasharray: 5 5
