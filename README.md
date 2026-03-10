@@ -6,7 +6,7 @@ A smart water management system that blends RO reject water with rainwater to ac
 
 ![Dashboard Preview](frontend/assets/dashboard-preview.png)
 
-## �️ System Architecture
+## 🏗️ System Architecture
 
 ```mermaid
 graph TD
@@ -29,7 +29,7 @@ graph TD
         
         subgraph Edge_Functions ["Edge Functions (Deno)"]
             Ingest["sensor-ingest"]:::edge
-            ML["ml-predict"]:::edge
+            ML["ml-predict (1000-row window)"]:::edge
             Game["gamification"]:::edge
             Alert["alert-check"]:::edge
             Payment["payment-simulation"]:::edge
@@ -49,7 +49,7 @@ graph TD
     %% API Interactions (Edge Functions)
     UI -- "Predictions (EdgeAPI.predict)" --> ML
     UI -- "Leaderboard (EdgeAPI)" --> Game
-    UI -- "Transactions (EdgeAPI)" --> Payment
+    UI -- "Transactions & Features (EdgeAPI)" --> Payment
     
     %% Ingest Fan-out
     Ingest -- "Trigger" --> ML
@@ -77,9 +77,9 @@ graph TD
 - **Authentication**: Secure Google OAuth and Magic Link Login via Supabase Auth
 
 ### Machine Learning via Edge Functions
-- **Trained Model Predictions**: Data-driven Linear Regression weights trained on 10,000 parameter combinations
-- **Short-term Ensemble**: ARIMA, WMA, Kalman filters running on Supabase Edge Functions (`ml-predict`)
-- **Actionable Insights**: Optimal blend ratios and time-to-target calculations
+- **Advanced Trained Predictor**: Data-driven Linear Regression weights trained on a high-fidelity **20,000-row** dataset.
+- **Deep Historical Context**: Analyzes a sliding window of the last **1,000 readings** to identify long-term trends and anomalies.
+- **Short-term Ensemble**: ARIMA, WMA, Kalman filters running on Supabase Edge Functions (`ml-predict`) for high-precision 60s forecasts.
 
 ### Gamification
 - **Points System**: Earn points for water-saving actions
