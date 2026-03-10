@@ -165,14 +165,19 @@ const Dashboard = {
 
                 if (dbData?.success && dbData.readings?.blended?.tds) {
                     const latestTs = new Date(dbData.readings.blended.timestamp || 0).getTime();
+                    const now = Date.now();
 
                     // DO NOT use live DB data if it's identical to the timestamp we just pushed 1 second ago
-                    // This prevents the dashboard from thinking its own "Live" simulation replay is real Wokwi data
-                    if (Math.abs(latestTs - this.lastSimIngestTime) > 3000) {
+                    // Check if data is fresh (within last 60 seconds) to support hybrid mode
+                    if (now - latestTs < 60000 && Math.abs(latestTs - this.lastSimIngestTime) > 3000) {
                         tanks = dbData.readings;
-                        console.log('Dashboard: Using latest DB data source', tanks);
+                        console.log('Dashboard: Using live DB data source', tanks);
                         this._setDataSource('db');
                         this.updatePredictions(tanks, this.blendRatio);
+                    } else if (Math.abs(latestTs - this.lastSimIngestTime) <= 3000) {
+                        // Doing nothing lets it fall through to Simulation block
+                    } else {
+                        console.log('Dashboard: DB data is too old for hybrid mode', (now - latestTs) / 1000, 's');
                     }
                 }
             } catch (e) {
