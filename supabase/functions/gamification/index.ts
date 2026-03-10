@@ -8,6 +8,57 @@ serve(async (req) => {
     if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
     try {
         const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
+
+        // GET: Fetch stats and achievements
+        if (req.method === "GET") {
+            const url = new URL(req.url);
+            const userId = url.searchParams.get("userId");
+            const action = url.searchParams.get("action");
+
+            if (action === "leaderboard") {
+                const { data } = await supabase.from("leaderboard").select("*, profiles (username, points)").order("points", { ascending: false }).limit(20);
+
+                // Map the profile data into a flat array structure expected by the frontend
+                const mappedLeaderboard = (data || []).map((row: any, i: number) => ({
+                    rank: i + 1,
+                    username: row.profiles?.username || "Anonymous",
+                    points: row.points || row.profiles?.points || 0,
+                    levelName: "Level " + Math.floor((row.points || 0) / 100 + 1) // simple approximation
+                }));
+
+                return new Response(JSON.stringify({ success: true, leaderboard: mappedLeaderboard }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+            }
+
+            if (!userId) {
+                return new Response(JSON.stringify({ error: "userId is required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+            }
+
+            // Fetch user stats
+            const { data: stats } = await supabase.from("user_stats").select("*").eq("user_id", userId).single();
+            const { data: achievements } = await supabase.from("user_achievements").select(`
+                achievement_id,
+                achievements ( id, name, description, icon )
+            `).eq("user_id", userId);
+
+            // Format fetched achievements to include 'earned: true' and basic properties
+            const formattedAchievements = achievements?.map((a: any) => ({
+                id: a.achievement_id,
+                name: a.achievements?.name,
+                description: a.achievements?.description,
+                icon: a.achievements?.icon,
+                earned: true
+            })) || [];
+
+            return new Response(
+                JSON.stringify({
+                    success: true,
+                    stats: stats || {},
+                    achievements: formattedAchievements
+                }),
+                { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+        }
+
         const { userId, readings } = await req.json();
         if (!userId) return new Response(JSON.stringify({ success: true, result: null }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
         const blendedTDS = readings?.blended?.tds ?? 0;

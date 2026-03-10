@@ -521,10 +521,12 @@ const Dashboard = {
         }
 
         // Estimate water saved based on rainwater usage
+        // If update interval is 2s, we add (flowRate / 60) * 2 Liters
         const rainFlow = tanks.rainwater?.flowRate || 0;
         if (rainFlow > 0) {
-            this.stats.totalRainwaterUsed += (rainFlow * this.updateInterval / 60000);
-            this.stats.totalWaterSaved += (rainFlow * this.updateInterval / 60000) * 0.5;
+            const litersPerStep = (rainFlow / 60) * (this.updateInterval / 1000);
+            this.stats.totalRainwaterUsed += litersPerStep;
+            this.stats.totalWaterSaved += litersPerStep * 0.5; // Assuming 50% efficiency for "saved" metric
         }
 
         // Update UI
@@ -555,10 +557,15 @@ const Dashboard = {
 
         const optimalTime = document.getElementById('optimal-time');
         if (optimalTime) {
-            const totalMinutes = this.stats.tdsReadings.length * this.updateInterval / 60000;
-            const optimalPercent = totalMinutes > 0 ?
-                (this.stats.optimalTdsMinutes / totalMinutes * 100) : 0;
-            optimalTime.textContent = `${optimalPercent.toFixed(0)}%`;
+            if (this.stats.tdsReadings.length > 0) {
+                // Rather than converting to minutes, just use raw update ticks
+                const totalTicks = this.stats.tdsReadings.length;
+                const optimalTicks = this.stats.optimalTdsMinutes / (this.updateInterval / 60000);
+                const optimalPercent = (optimalTicks / totalTicks) * 100;
+                optimalTime.textContent = `${optimalPercent.toFixed(0)}%`;
+            } else {
+                optimalTime.textContent = `0%`;
+            }
         }
     },
 
