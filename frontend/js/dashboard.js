@@ -162,22 +162,15 @@ const Dashboard = {
                 clearTimeout(timeoutId);
 
                 if (dbData?.success && dbData.readings?.blended?.tds) {
-                    // Check if data is actually "fresh" (within last 30s)
                     const latestTs = new Date(dbData.readings.blended.timestamp || 0).getTime();
-                    const now = Date.now();
 
                     // DO NOT use live DB data if it's identical to the timestamp we just pushed 1 second ago
                     // This prevents the dashboard from thinking its own "Live" simulation replay is real Wokwi data
-                    if (now - latestTs < 30000 && Math.abs(latestTs - this.lastSimIngestTime) > 3000) {
+                    if (Math.abs(latestTs - this.lastSimIngestTime) > 3000) {
                         tanks = dbData.readings;
-                        console.log('Dashboard: Using live DB data source', tanks);
+                        console.log('Dashboard: Using latest DB data source', tanks);
                         this._setDataSource('db');
                         this.updatePredictions(tanks, this.blendRatio);
-                    } else if (Math.abs(latestTs - this.lastSimIngestTime) <= 3000) {
-                        // Doing nothing lets it fall through to Simulation block
-                        // (Without printing "DB data is too old" which would be confusing)
-                    } else {
-                        console.log('Dashboard: DB data is too old', (now - latestTs) / 1000, 's');
                     }
                 }
             } catch (e) {
