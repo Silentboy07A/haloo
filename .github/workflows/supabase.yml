@@ -23,11 +23,18 @@ jobs:
         with:
           version: latest
 
+      - name: Verify Supabase Token
+        run: |
+          if [ -z "${{ secrets.SUPABASE_ACCESS_TOKEN }}" ]; then
+            echo "::error::SUPABASE_ACCESS_TOKEN is missing! Please add it to your GitHub Repository Secrets."
+            exit 1
+          fi
+
       - name: Deploy Edge Functions
         run: |
-          supabase functions deploy ml-predict --project-ref $SUPABASE_PROJECT_ID
-          supabase functions deploy gamification --project-ref $SUPABASE_PROJECT_ID
-          supabase functions deploy payment-simulation --project-ref $SUPABASE_PROJECT_ID
+          supabase functions deploy ml-predict --project-ref $SUPABASE_PROJECT_ID --access-token ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          supabase functions deploy gamification --project-ref $SUPABASE_PROJECT_ID --access-token ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          supabase functions deploy payment-simulation --project-ref $SUPABASE_PROJECT_ID --access-token ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
       - name: Force PostgREST schema cache reload
         run: |
